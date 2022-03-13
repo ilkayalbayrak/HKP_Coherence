@@ -1,0 +1,3 @@
+[] Identify and suppress minimal nodes
+[] Figure out how to follow the information loss, Assume IL(e)=1 for now
+[] Add sigma parameter to decide percentage of private items among all unique items
