@@ -1,5 +1,8 @@
 import numpy as np
 import time
+import itertools
+
+from anytree import AnyNode, NodeMixin
 
 '''
     #######- GREEDY ALGORITHM -#######
@@ -19,6 +22,26 @@ def find_unique_items(input_file):
 
         return unique_items
 
+# FIXME: Score table could be a dict
+# class ScoreTable:
+#     def __init__(self, ):
+class Node(NodeMixin):
+    def __init__(self, label, mole_num, node_link, parent=None, children=None):
+        """
+
+        :param label: The item at this node
+        :param mole_num: The number of minimal moles pass this node
+        :param node_link: The link pointing to the next node with the same label
+        :param parent: The parent node of this node
+        :param children: Children nodes if any
+        """
+        super(Node, self).__init__()
+        self.label = label
+        self.mole_num = mole_num
+        self.node_link = node_link
+        self.parent = parent
+        if children:
+            self.children = children
 
 # this can be an inner class of hkp coherence
 class Transaction:
@@ -50,6 +73,8 @@ class HKPCoherence:
         self.p = p
         self.transactions = list()
         self.size1_moles = list()
+        self.score_table = dict()
+        self._beta_size = 0
         for index, row in enumerate(self.dataset):
             # TODO:
             public = [i for i in row if i not in private_item_list]
@@ -148,50 +173,22 @@ class HKPCoherence:
         F = [F1]
         M = [M1]
         del F1, M1, C1
-        i = 0
+        # FIXME: this may need to start from 1 instead of 0
+        i = self._beta_size
         while i < self.p and len(F[i]) > 0:
-            print(f"i:{i} and len(F[i]):{len(F[i])}")
+            print(f"Started i:{i} and len(F[i]):{len(F[i])}")
+            time_a = time.time()
             # generate Canditate set for Mi+1 and Fi+1
             F_, M_ = self.foo(F[i], M[i])
             F.append(F_)
             M.append(M_)
-            i += 1
+            self._beta_size += 1
+            print(f"M-F calculation time for i:{i} is {time.time() - time_a} seconds")
 
-            # scan D
+        print(f"Finished find minimal moles in {time.time() - start_time} seconds")
 
-        # print(f"M:{len(M)}, F1:{len(F)}")
-        # return M1, F1
-
-    @staticmethod
-    def diff_list(L1, L2):
-        return len(set(L1).symmetric_difference(set(L2)))
-
-    @staticmethod
-    def generate_C( F:list, M:list) -> list:
-        """
-
-        :param F: List of extendible moles
-        :param M: List of minimal moles
-        :return: Candidate list Ci+1
-        """
-        # this is basically a list of betas
-        # for Fi and Fi+1
-
-        C = list()
-        for i in range(len(F)):
-            for j in range(i + 1, len(F)):
-                # print(f"Fi:{F[i]}, Fi+1:{F[j]}")
-                # if self.diff_list(F[i], F[j]) == 2:
-                new_F = list(F[i])
-                new_F.extend(x for x in F[j] if x not in new_F)
-                flag = False
-                for m in M:
-                    if set(new_F).issuperset(m):
-                        flag = True
-                        break
-                if not flag:
-                    C.append(new_F)
-        return C
+        # no need to return F
+        return M
 
     def foo(self, F, M):
         """Return (Fi+1, Mi+1)
@@ -206,8 +203,66 @@ class HKPCoherence:
                 F1.append(beta)
         return F1, M1
 
-    def pipeline(self):
+    @staticmethod
+    def find_subsets_of_size_n(l: list, n: int):
+        return itertools.combinations(l, n)
+
+    @staticmethod
+    def diff_list(L1, L2):
+        return len(set(L1).symmetric_difference(set(L2)))
+
+    # @staticmethod
+    def generate_C(self, F: list, M: list) -> list:
+        """
+
+        :param F: List of extendible moles
+        :param M: List of minimal moles
+        :return: Candidate list Ci+1
+        """
+        # this is basically a list of betas
+        # for Fi and Fi+1
+
+        # print(len(F))
+        # print(len(F[2]))
+        C = list()
+        for i in range(len(F)):
+            for j in range(i + 1, len(F)):
+                # print(f"Fi:{F[i]}, Fi+1:{F[j]}")
+                if self.diff_list(F[i], F[j]) == 2:
+                    new_F = list(F[i])
+                    new_F.extend(x for x in F[j] if x not in new_F)
+                    flag = False
+                    for m in M:
+                        if set(new_F).issuperset(m):
+                            flag = True
+                            break
+                    if not flag:
+                        C.append(new_F)
+        # self.find_subsets_of_size_n(F[self._beta_size],se)
+
+        return C
+
+    def info_loss(self, e):
+        """
+        A function for calculating the information loss upon suppressing a public item e
+        :param e: Public item e
+        :return:
+        """
+        # IL(e) = Sup(e)
+        return self.Sup(e)
+
+    def build_mole_tree(self):
         pass
+
+    def pipeline(self):
+        # suppress minimal moles
+        self.suppress_size1_moles()
+
+        # find minimal moles M* from D
+        min_moles = self.find_minimal_moles()
+
+        # TODO: build mole-tree for min moles
+        return None
 
 
 if __name__ == "__main__":
@@ -230,7 +285,7 @@ if __name__ == "__main__":
         for line in file:
             dataset.append([int(i) for i in set(line.rstrip().split())])
 
-    hkp = HKPCoherence(dataset, public_items, private_items, h=0.8, k=3, p=4)
+    hkp = HKPCoherence(dataset, public_items, private_items, h=0.8, k=3, p=3)
 
     hkp.suppress_size1_moles()
     hkp.find_minimal_moles()
