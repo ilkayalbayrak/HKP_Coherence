@@ -292,6 +292,40 @@ class HKPCoherence:
         print(f"Finished generating candidate list len(C):{len(C)}, time-passed:{time.time() - start_time}")
         return C
 
+    def MM_e(self, e: int) -> int:
+        """ Returns the number of minimal moles containing the public item e """
+        count = 0
+        # i is the mole length
+        for i in self.moles:
+            for mole in i:
+                if e in mole:
+                    count += 1
+
+        return count
+
+    def MM_desc_order(self):
+        """
+        Function that returns public items and their respected MM(e) counts in descending order
+
+        :return:
+        """
+        items = set()
+
+        items_mm_count = dict()
+
+        # find the public items that are parts of minimal moles
+        for i in self.moles:
+            for mole in i:
+                for item in mole:
+                    if item not in items:
+                        items.add(item)
+
+        # for each item count how many moles they are present in
+        for item in items:
+            items_mm_count[item] = self.MM_e(item)
+
+        return dict(sorted(items_mm_count.items(), key=lambda itm: itm[1]))
+
     def info_loss(self, e):
         """
         A function for calculating the information loss upon suppressing a public item e
