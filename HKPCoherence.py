@@ -210,8 +210,6 @@ class HKPCoherence:
             print(f"len(M[{counter}]):{len(i)}")
             counter += 1
 
-
-
         self.moles = M
         return M
 
@@ -263,7 +261,7 @@ class HKPCoherence:
         n = len(F[0]) + 1
         print(n)
 
-        size_n_subsets = find_subarrays_of_size_n(list(F_items),n)
+        size_n_subsets = find_subarrays_of_size_n(list(F_items), n)
         for subset in size_n_subsets:
             flag = False
             for m in M:
@@ -275,54 +273,77 @@ class HKPCoherence:
 
         # for i in range(len(F)):
 
-            # for j in range(i + 1, len(F)):
-            #     print(f"Fi:{F[i]}, Fi+1:{F[j]}")
-            #     if self.diff_list(F[i], F[j]) == 2:
-            #         new_F = list(F[i])
-            #         new_F.extend(x for x in F[j] if x not in new_F)
-            #         flag = False
-            #         for m in M:
-            #             # check if the Fi+1 is a superset of any mole in M
-            #             if set(new_F).issuperset(m):
-            #                 flag = True
-            #                 break
-            #         if not flag:
-            #             C.append(new_F)
+        # for j in range(i + 1, len(F)):
+        #     print(f"Fi:{F[i]}, Fi+1:{F[j]}")
+        #     if self.diff_list(F[i], F[j]) == 2:
+        #         new_F = list(F[i])
+        #         new_F.extend(x for x in F[j] if x not in new_F)
+        #         flag = False
+        #         for m in M:
+        #             # check if the Fi+1 is a superset of any mole in M
+        #             if set(new_F).issuperset(m):
+        #                 flag = True
+        #                 break
+        #         if not flag:
+        #             C.append(new_F)
         # self.find_subsets_of_size_n(F[self._beta_size],se)
         print(f"Finished generating candidate list len(C):{len(C)}, time-passed:{time.time() - start_time}")
         return C
 
-    def MM_e(self, e: int) -> int:
+    def MM_e(self, e: int, min_moles: list) -> int:
         """ Returns the number of minimal moles containing the public item e """
         count = 0
         # i is the mole length
-        for i in self.moles:
+        for i in min_moles:
             for mole in i:
                 if e in mole:
                     count += 1
 
         return count
 
-    def MM_desc_order(self):
+    def MM_desc_order(self, min_moles):
         """
         Function that returns public items and their respected MM(e) counts in descending order
 
         :return:
         """
-        items = set()
 
+        # items = set()
         items_mm_count = dict()
-
+        ordered_moles = dict()
         # find the public items that are parts of minimal moles
-        for i in self.moles:
+        # i denotes the size of the mole (beta)
+        for mole_level, i in enumerate(min_moles):
+            # ordered_moles[mole_level] = dict()
             for mole in i:
                 for item in mole:
-                    if item not in items:
-                        items.add(item)
+                    if item not in items_mm_count:
+                        mm_e = self.MM_e(item, min_moles)
+                        items_mm_count[item] = mm_e
+                # TODO: register mole mm_e and sort them in descending order
+                # ordered_moles[i][index] = mole_mm_count
 
-        # for each item count how many moles they are present in
-        for item in items:
-            items_mm_count[item] = self.MM_e(item)
+        for mole_level, i in enumerate(min_moles):
+            ordered_moles[mole_level] = dict()
+            for index, mole in enumerate(i):
+                mole_mm_count = 0
+                ordered_moles[mole_level][index] = dict()
+                mole_dict = dict()
+                mole_dict[index] = dict()
+                for item in mole:
+                    mole_mm_count += items_mm_count.get(item)
+                ordered_moles[mole_level][index]["mm_count"]= mole_mm_count
+                ordered_moles[mole_level][index]["mole"] = mole
+        print(f"ordered moles items")
+        for value in ordered_moles.values():
+            # print(sorted(item, key=lambda itm: itm[1]["mm_count"]))
+            # print(item.__getitem__(item))
+            print(type(value))
+            print(dict(sorted(value.items(), key=lambda itm: itm[1]["mm_count"], reverse=True)))
+            # for i in item:
+            #     print("------")
+            #     print(i)
+                # print(sorted(i.items(), key=lambda itm: itm[1]["mm_count"]))
 
         return dict(sorted(items_mm_count.items(), key=lambda itm: itm[1]))
 
@@ -336,7 +357,12 @@ class HKPCoherence:
         return self.Sup(e)
 
     def build_mole_tree(self):
-        pass
+        score_table = {}
+        root = Node()
+        # MM(e) rankings of the items that are parts of the moles
+        items_MM_desc_order = self.MM_desc_order(self.moles)
+
+        # find rankings for the moles in the minimal moles list
 
     def pipeline(self):
         # suppress minimal moles
@@ -346,17 +372,16 @@ class HKPCoherence:
         min_moles = self.find_minimal_moles()
 
         # TODO: build mole-tree for min moles
+        self.build_mole_tree()
         return None
 
 
-def build_tree(M):
-    score_table = {}
-    root = Node()
-    for i in M:
-        print(i)
-
-
-    # pass
+# def build_tree(self, M):
+#     score_table = {}
+#     root = Node()
+#     moles_MM_desc_order = self.
+#
+#     # pass
 
 
 if __name__ == "__main__":
@@ -380,15 +405,14 @@ if __name__ == "__main__":
         for line in file:
             dataset.append([int(i) for i in set(line.rstrip().split())])
 
-    hkp = HKPCoherence(dataset, public_items, private_items, h=0.8, k=2, p=3)
+    hkp = HKPCoherence(dataset, public_items, private_items, h=0.8, k=2, p=2)
 
     hkp.suppress_size1_moles()
     M_star = hkp.find_minimal_moles()
+    hkp.build_mole_tree()
 
     with open("hkp_pickle.pkl", "wb") as f:
         pickle.dump(hkp, f)
-
-
 
     # l = [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4], [2, 6]]
     # root = Node(label="root")
@@ -397,4 +421,3 @@ if __name__ == "__main__":
     #     print("empty")
     # print(l[0][1])
     # build_tree(l)
-
