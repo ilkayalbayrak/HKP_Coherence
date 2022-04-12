@@ -3,7 +3,7 @@ import time
 import itertools
 import pickle
 
-from anytree import AnyNode, NodeMixin, RenderTree
+from anytree import AnyNode, NodeMixin, RenderTree, search
 
 '''
     #######- GREEDY ALGORITHM -#######
@@ -87,6 +87,7 @@ class HKPCoherence:
         self.transactions = list()
         self.size1_moles = list()
         self.moles = None
+        self.MM = dict()
         self.score_table = dict()
 
         self._beta_size = 0
@@ -301,7 +302,7 @@ class HKPCoherence:
 
         return count
 
-    def MM_desc_order(self, min_moles):
+    def MM_desc_order(self, min_moles: list) -> dict:
         """
         Function that returns public items and their respected MM(e) counts in descending order
 
@@ -318,49 +319,91 @@ class HKPCoherence:
             for mole in i:
                 for item in mole:
                     if item not in items_mm_count:
-                        mm_e = self.MM_e(item, min_moles)
-                        items_mm_count[item] = mm_e
-                # TODO: register mole mm_e and sort them in descending order
-                # ordered_moles[i][index] = mole_mm_count
+                        items_mm_count[item] = self.MM_e(item, min_moles)
 
+        # sort moles in descending order of cumulative MM
         for mole_level, i in enumerate(min_moles):
-            ordered_moles[mole_level] = dict()
+            mole_dict = dict()
             for index, mole in enumerate(i):
                 mole_mm_count = 0
-                ordered_moles[mole_level][index] = dict()
-                mole_dict = dict()
                 mole_dict[index] = dict()
                 for item in mole:
                     mole_mm_count += items_mm_count.get(item)
-                ordered_moles[mole_level][index]["mm_count"]= mole_mm_count
-                ordered_moles[mole_level][index]["mole"] = mole
-        print(f"ordered moles items")
-        for value in ordered_moles.values():
-            # print(sorted(item, key=lambda itm: itm[1]["mm_count"]))
-            # print(item.__getitem__(item))
-            print(type(value))
-            print(dict(sorted(value.items(), key=lambda itm: itm[1]["mm_count"], reverse=True)))
-            # for i in item:
-            #     print("------")
-            #     print(i)
-                # print(sorted(i.items(), key=lambda itm: itm[1]["mm_count"]))
+                mole_dict[index]["mm_count"] = mole_mm_count
+                mole_dict[index]["mole"] = sorted(mole, key=lambda x:items_mm_count.get(x), reverse=True)
+            ordered_moles[mole_level] = dict(
+                sorted(mole_dict.items(), key=lambda itm: itm[1]["mm_count"], reverse=True))
 
-        return dict(sorted(items_mm_count.items(), key=lambda itm: itm[1]))
+        self.MM = items_mm_count
+        return ordered_moles
 
     def info_loss(self, e):
         """
-        A function for calculating the information loss upon suppressing a public item e
+        A function for calculating the information loss for suppressing a public item e
         :param e: Public item e
         :return:
         """
         # IL(e) = Sup(e)
         return self.Sup(e)
 
+    def get_mole_num(self, start):
+
+
     def build_mole_tree(self):
-        score_table = {}
-        root = Node()
+        score_table = dict()
+        root = Node(label='root')
         # MM(e) rankings of the items that are parts of the moles
-        items_MM_desc_order = self.MM_desc_order(self.moles)
+        M_star = self.MM_desc_order(self.moles)
+        # print(M_sta)
+        for mole_level in M_star.values():
+            # print(f"mole level : {mole_level}")
+            for mole in mole_level.values():
+                # print(f"------\nmole {mole['mole']}")
+                for item in mole["mole"]:
+                    print(item)
+                    # TODO: Add item to scoretable, create tree structure
+                    # TODO: we may count the mole_num after finishing the tree??
+                    # TODO: count how many child nodes after a specific node, it gives the mole_num, count children of children aswell
+                    if item not in score_table.keys() and item == mole["mole"][0]:
+
+                        # first item of every mole has root node as parent
+                        child = Node(label=item,
+                                     mole_num=0,
+                                     node_link=None,
+                                     parent=root)
+
+                        score_table[item] = dict()
+                        score_table[item]["MM"] = self.MM.get(item)
+                        score_table[item]["IL"] = self.info_loss([item])
+                        score_table[item]["head_of_link"] = child
+                    # elif item in score_table
+
+                    if item not in score_table.keys() and item != mole["mole"]:
+                        child = Node(label=item,
+                                     mole_num=0,
+                                     node_link=None,
+                                     parent=root) # get mole[0] as parent
+
+
+                        score_table[item] = dict()
+                        score_table[item]["MM"] = self.MM.get(item)
+                        score_table[item]["IL"] = self.info_loss([item])
+                        score_table[item]["head_of_link"] = child
+                        pass
+
+                    # if item
+
+
+
+
+                    if item != mole["mole"][0] and item not in score_table.keys():
+
+        print(RenderTree(root))
+        for pre, _, node in RenderTree(root):
+            treestr = u"%s%s" % (pre, node.label)
+            print(treestr.ljust(8), node.label)
+        print(f"Score Table: {score_table}")
+
 
         # find rankings for the moles in the minimal moles list
 
