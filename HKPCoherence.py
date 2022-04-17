@@ -55,6 +55,11 @@ class Node(NodeMixin):
         if children:
             self.children = children
 
+    @staticmethod
+    def all_paths(start_node):
+        skip = len(start_node.path) - 1
+        return [leaf.path[skip:] for leaf in search.PreOrderIter(start_node, filter_=lambda node: node.is_leaf)]
+
 
 # this can be an inner class of hkp coherence
 class Transaction:
@@ -66,7 +71,7 @@ class Transaction:
 
 
 class HKPCoherence:
-    # TODO: should I save the suppressed items into a global variable
+    # TODO: should I save the suppressed items into a global variable?
     def __init__(self, dataset: list, public_item_list: list, private_item_list: list, h: float, k: int, p: int):
         """
 
@@ -330,7 +335,7 @@ class HKPCoherence:
                 for item in mole:
                     mole_mm_count += items_mm_count.get(item)
                 mole_dict[index]["mm_count"] = mole_mm_count
-                mole_dict[index]["mole"] = sorted(mole, key=lambda x:items_mm_count.get(x), reverse=True)
+                mole_dict[index]["mole"] = sorted(mole, key=lambda x: items_mm_count.get(x), reverse=True)
             ordered_moles[mole_level] = dict(
                 sorted(mole_dict.items(), key=lambda itm: itm[1]["mm_count"], reverse=True))
 
@@ -346,8 +351,26 @@ class HKPCoherence:
         # IL(e) = Sup(e)
         return self.Sup(e)
 
-    def get_mole_num(self, start):
+    @staticmethod
+    def get_mole_num(node: Node) -> int:
+        return len(Node.all_paths(node))
 
+    @staticmethod
+    def get_last_node_link(node: Node, score_table: dict) -> Node:
+        head_node = None
+        try:
+            head_node = score_table[node.label]["head_of_link"]
+        except KeyError:
+            pass
+
+        current_node = head_node
+        next_node = current_node["node_link"]
+
+        while next_node is not None:
+            current_node = next_node
+            next_node = current_node["node_link"]
+
+        return current_node
 
     def build_mole_tree(self):
         score_table = dict()
@@ -364,8 +387,8 @@ class HKPCoherence:
                     # TODO: Add item to scoretable, create tree structure
                     # TODO: we may count the mole_num after finishing the tree??
                     # TODO: count how many child nodes after a specific node, it gives the mole_num, count children of children aswell
+                    # each root to leaf path represents a minimal mole in M*
                     if item not in score_table.keys() and item == mole["mole"][0]:
-
                         # first item of every mole has root node as parent
                         child = Node(label=item,
                                      mole_num=0,
@@ -378,12 +401,11 @@ class HKPCoherence:
                         score_table[item]["head_of_link"] = child
                     # elif item in score_table
 
-                    if item not in score_table.keys() and item != mole["mole"]:
+                    if item not in score_table.keys() and item != mole["mole"][0]:
                         child = Node(label=item,
                                      mole_num=0,
                                      node_link=None,
-                                     parent=root) # get mole[0] as parent
-
+                                     parent=root)  # get mole[0] as parent
 
                         score_table[item] = dict()
                         score_table[item]["MM"] = self.MM.get(item)
@@ -391,19 +413,21 @@ class HKPCoherence:
                         score_table[item]["head_of_link"] = child
                         pass
 
-                    # if item
+                    if item in score_table.keys() and item == mole["mole"][0]:
+                        child = Node(label=item,
+                                     mole_num=0,
+                                     node_link=None,
+                                     parent=root)  # get mole[0] as parent
+                        pass
 
-
-
-
-                    if item != mole["mole"][0] and item not in score_table.keys():
+                    if item in score_table.keys() and item != mole["mole"][0]:
+                        pass
 
         print(RenderTree(root))
         for pre, _, node in RenderTree(root):
             treestr = u"%s%s" % (pre, node.label)
             print(treestr.ljust(8), node.label)
         print(f"Score Table: {score_table}")
-
 
         # find rankings for the moles in the minimal moles list
 
