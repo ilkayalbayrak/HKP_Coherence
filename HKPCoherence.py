@@ -357,18 +357,16 @@ class HKPCoherence:
 
     @staticmethod
     def get_last_node_link(node: Node, score_table: dict) -> Node:
-        head_node = None
-        try:
-            head_node = score_table[node.label]["head_of_link"]
-        except KeyError:
-            pass
+
+
+        head_node = score_table[node.label]["head_of_link"]
 
         current_node = head_node
-        next_node = current_node["node_link"]
+        next_node = current_node.node_link
 
         while next_node is not None:
             current_node = next_node
-            next_node = current_node["node_link"]
+            next_node = current_node.node_link
 
         return current_node
 
@@ -390,7 +388,7 @@ class HKPCoherence:
                     # each root to leaf path represents a minimal mole in M*
                     if item not in score_table.keys() and item == mole["mole"][0]:
                         # first item of every mole has root node as parent
-                        child = Node(label=item,
+                        node = Node(label=item,
                                      mole_num=0,
                                      node_link=None,
                                      parent=root)
@@ -398,11 +396,12 @@ class HKPCoherence:
                         score_table[item] = dict()
                         score_table[item]["MM"] = self.MM.get(item)
                         score_table[item]["IL"] = self.info_loss([item])
-                        score_table[item]["head_of_link"] = child
+                        score_table[item]["head_of_link"] = node
+
                     # elif item in score_table
 
                     if item not in score_table.keys() and item != mole["mole"][0]:
-                        child = Node(label=item,
+                        node = Node(label=item,
                                      mole_num=0,
                                      node_link=None,
                                      parent=root)  # get mole[0] as parent
@@ -410,18 +409,22 @@ class HKPCoherence:
                         score_table[item] = dict()
                         score_table[item]["MM"] = self.MM.get(item)
                         score_table[item]["IL"] = self.info_loss([item])
-                        score_table[item]["head_of_link"] = child
-                        pass
+                        score_table[item]["head_of_link"] = node
 
-                    if item in score_table.keys() and item == mole["mole"][0]:
-                        child = Node(label=item,
+
+                    if item in score_table.keys():
+                        node = Node(label=item,
                                      mole_num=0,
                                      node_link=None,
                                      parent=root)  # get mole[0] as parent
-                        pass
 
-                    if item in score_table.keys() and item != mole["mole"][0]:
-                        pass
+                        # find last linked node with the same label starting from head_of_link
+                        # then make the current node its node link, so all the nodes with the same label will
+                        # be linked to each other
+
+                        last_node = self.get_last_node_link(node, score_table)
+                        last_node.node_link = node
+
 
         print(RenderTree(root))
         for pre, _, node in RenderTree(root):
@@ -478,8 +481,18 @@ if __name__ == "__main__":
     M_star = hkp.find_minimal_moles()
     hkp.build_mole_tree()
 
-    with open("hkp_pickle.pkl", "wb") as f:
-        pickle.dump(hkp, f)
+    n0 = Node("n0")
+    n1 = Node("n1")
+    n2 = Node("n2")
+
+    n0.node_link = n1
+    n1.node_link = n2
+    test_dict = {"n0":{"head_of_link":n0}}
+    print(f"last node == {hkp.get_last_node_link(n0, test_dict).node_link}")
+
+
+    # with open("hkp_pickle.pkl", "wb") as f:
+    #     pickle.dump(hkp, f)
 
     # l = [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4], [2, 6]]
     # root = Node(label="root")
