@@ -396,6 +396,9 @@ class HKPCoherence:
                         score_table[item] = dict()
                         score_table[item]["MM"] = self.MM.get(item)
                         score_table[item]["IL"] = self.info_loss([item])
+
+                        # if the item is not  in the score table yet, register it to the table and
+                        # make the node head of link
                         score_table[item]["head_of_link"] = node
 
                     # elif item in score_table
@@ -412,11 +415,34 @@ class HKPCoherence:
                         score_table[item]["head_of_link"] = node
 
 
-                    if item in score_table.keys():
+                    if item in score_table.keys() and item == mole["mole"][0]:
+                        continue
+                        # if item in score table, find first item of the mole from the table
+                        # and register it as the parent node
+                        # parent_node = score_table[item]["head_of_link"]
+                        #
+                        # node = Node(label=item,
+                        #              mole_num=0,
+                        #              node_link=None,
+                        #              parent=parent_node)  # get mole[0] as parent
+
+                        # find last linked node with the same label starting from head_of_link
+                        # then make the current node its node link, so all the nodes with the same label will
+                        # be linked to each other
+
+                        # last_node = self.get_last_node_link(node, score_table)
+                        # last_node.node_link = node
+
+                    if item in score_table.keys() and item != mole["mole"][0]:
+                        # use first item of the mole as the parent node for the rest
+                        first_item = mole["mole"][0]
+
+                        # find the head node of the first item in the mole
+                        parent_node = score_table[first_item]["head_of_link"]
                         node = Node(label=item,
                                      mole_num=0,
                                      node_link=None,
-                                     parent=root)  # get mole[0] as parent
+                                     parent=parent_node)  # get mole[0] as parent
 
                         # find last linked node with the same label starting from head_of_link
                         # then make the current node its node link, so all the nodes with the same label will
@@ -426,10 +452,10 @@ class HKPCoherence:
                         last_node.node_link = node
 
 
-        print(RenderTree(root))
+        # print(RenderTree(root))
         for pre, _, node in RenderTree(root):
             treestr = u"%s%s" % (pre, node.label)
-            print(treestr.ljust(8), node.label)
+            print(treestr.ljust(8))
         print(f"Score Table: {score_table}")
 
         # find rankings for the moles in the minimal moles list
