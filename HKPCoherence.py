@@ -55,11 +55,6 @@ class Node(NodeMixin):
         if children:
             self.children = children
 
-    @staticmethod
-    def all_paths(start_node):
-        skip = len(start_node.path) - 1
-        return [leaf.path[skip:] for leaf in search.PreOrderIter(start_node, filter_=lambda node: node.is_leaf)]
-
 
 # this can be an inner class of hkp coherence
 class Transaction:
@@ -94,6 +89,7 @@ class HKPCoherence:
         self.moles = None
         self.MM = dict()
         self.score_table = None
+        self.mole_tree_root = None
 
         self._beta_size = 0
         for index, row in enumerate(self.dataset):
@@ -233,6 +229,11 @@ class HKPCoherence:
         return F1, M1
 
     @staticmethod
+    def all_paths(start_node: Node):
+        skip = len(start_node.path) - 1
+        return [leaf.path[skip:] for leaf in search.PreOrderIter(start_node, filter_=lambda node: node.is_leaf)]
+
+    @staticmethod
     def find_subsets_of_size_n(l: list, n: int):
         return itertools.combinations(l, n)
 
@@ -277,22 +278,6 @@ class HKPCoherence:
             if not flag:
                 C.append(list(subset))
 
-        # for i in range(len(F)):
-
-        # for j in range(i + 1, len(F)):
-        #     print(f"Fi:{F[i]}, Fi+1:{F[j]}")
-        #     if self.diff_list(F[i], F[j]) == 2:
-        #         new_F = list(F[i])
-        #         new_F.extend(x for x in F[j] if x not in new_F)
-        #         flag = False
-        #         for m in M:
-        #             # check if the Fi+1 is a superset of any mole in M
-        #             if set(new_F).issuperset(m):
-        #                 flag = True
-        #                 break
-        #         if not flag:
-        #             C.append(new_F)
-        # self.find_subsets_of_size_n(F[self._beta_size],se)
         print(f"Finished generating candidate list len(C):{len(C)}, time-passed:{time.time() - start_time}")
         return C
 
@@ -351,9 +336,8 @@ class HKPCoherence:
         # IL(e) = Sup(e)
         return self.Sup(e)
 
-    @staticmethod
-    def get_mole_num(node: Node) -> int:
-        return len(Node.all_paths(node))
+    def calculate_mole_num(self, node: Node) -> int:
+        return len(self.all_paths(node))
 
     @staticmethod
     def get_last_node_link(label, score_table: dict) -> Node:
@@ -409,7 +393,6 @@ class HKPCoherence:
                         score_table[item]["MM"] = self.MM.get(item)
                         score_table[item]["IL"] = self.info_loss([item])
 
-
                         # make the first item of the mole a direct child of the root node
                         if index == 0:
                             print(item)
@@ -423,25 +406,20 @@ class HKPCoherence:
                             score_table[item]["head_of_link"] = node
                             nodes.append(node)
                         else:
-                            print(f"item:{item}, nodes[index - 1]: {nodes[index-1].label}")
+                            print(f"item:{item}, nodes[index - 1]: {nodes[index - 1].label}")
                             # every item that comes after the first one should be the child of the following item
                             node = Node(label=item,
                                         mole_num=0,
                                         node_link=None,
-                                        parent=nodes[index-1])
+                                        parent=nodes[index - 1])
                             # if the item is not  in the score table yet, register it to the table and
                             # make the node head of link
                             score_table[item]["head_of_link"] = node
                             nodes.append(node)
 
                     else:
-                        # TODO: if head link is connected to ropt then use it as first item
-                        # or check the children of root
 
                         if index == 0:
-                            #
-                            # head_link = self.get_head_of_link(item, score_table)
-                            # temp_node_link = None
 
                             if item in [child.label for child in root.children]:
 
@@ -451,8 +429,7 @@ class HKPCoherence:
                                 nodes.append(node)
 
                             else:
-                                # if headlink parent is not root and node link dont have a link that is
-                                # direct child of root, thenn create a new node, child of root
+
                                 node = Node(label=item,
                                             mole_num=0,
                                             node_link=None,
@@ -483,8 +460,15 @@ class HKPCoherence:
                                 last_node.node_link = node
                                 nodes.append(node)
 
+        # travel all nodes of the tree, and assign mole numbers to each node
+        for node in search.PreOrderIter(root):
+            node.mole_num = self.calculate_mole_num(node)
+            print(f"Node: {node.label}, Mole num: {node.mole_num}")
 
+        root.mole_num = None
+        self.mole_tree_root = root
         self.score_table = score_table
+
         # print(RenderTree(root))
         for pre, _, node in RenderTree(root):
             treestr = u"%s%s" % (pre, node.label)
