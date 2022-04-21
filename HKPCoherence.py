@@ -380,9 +380,10 @@ class HKPCoherence:
             current_node = next_node
             next_node = current_node.node_link
 
-        if current_node.parent.label == "root":
+        if current_node.parent.is_root:
             return current_node
-        return None
+        else:
+            return None
 
     @staticmethod
     def get_head_of_link(label, score_table: dict) -> Node:
@@ -391,6 +392,7 @@ class HKPCoherence:
     def build_mole_tree(self):
         score_table = dict()
         root = Node(label='root')
+        parent_node = None
         # MM(e) rankings of the items that are parts of the moles
         M_star = self.MM_desc_order(self.moles)
         # print(M_sta)
@@ -399,86 +401,88 @@ class HKPCoherence:
             for mole in mole_level.values():
                 print(f"------\nmole: {mole['mole']}\nrest: {mole['mole'][1:]}")
                 # make first item of the mole a parent for the rest of the items
+                nodes = list()
+                for index, item in enumerate(mole["mole"]):
 
-                parent_node = None
-                first_item = mole["mole"][0]
+                    if item not in score_table.keys():
+                        score_table[item] = dict()
+                        score_table[item]["MM"] = self.MM.get(item)
+                        score_table[item]["IL"] = self.info_loss([item])
 
-                if first_item not in score_table.keys():
 
-                    parent_node = Node(label=first_item,
-                                       mole_num=0,
-                                       node_link=None,
-                                       parent=root)
+                        # make the first item of the mole a direct child of the root node
+                        if index == 0:
+                            print(item)
+                            node = Node(label=item,
+                                        mole_num=0,
+                                        node_link=None,
+                                        parent=root)
 
-                    score_table[first_item] = dict()
-                    score_table[first_item]["MM"] = self.MM.get(first_item)
-                    score_table[first_item]["IL"] = self.info_loss([first_item])
+                            # if the item is not  in the score table yet, register it to the table and
+                            # make the node head of link
+                            score_table[item]["head_of_link"] = node
+                            nodes.append(node)
+                        else:
+                            print(f"item:{item}, nodes[index - 1]: {nodes[index-1].label}")
+                            # every item that comes after the first one should be the child of the following item
+                            node = Node(label=item,
+                                        mole_num=0,
+                                        node_link=None,
+                                        parent=nodes[index-1])
+                            # if the item is not  in the score table yet, register it to the table and
+                            # make the node head of link
+                            score_table[item]["head_of_link"] = node
+                            nodes.append(node)
 
-                    # if the item is not  in the score table yet, register it to the table and
-                    # make the node head of link
-                    score_table[first_item]["head_of_link"] = parent_node
-                else:
-                    # if first item is in the scoretable
-                    # get the head of link node of the 1st item in mole
-                    # then check if resulting head of link node is direct child of the root
-                    # if it is not a direct child of the root, then create a new node with the 1st item label
-                    # then make it a direct child of the root
-                    # then add the rest of the mole items as child nodes to the freshly created root connected node
-                    print("#############################################")
+                    else:
+                        # TODO: if head link is connected to ropt then use it as first item
+                        # or check the children of root
 
-                    head_link = self.get_head_of_link(first_item, score_table)
-                    assert head_link is not None
-                    # check if the head of link node directly connected to root
-                    print(f"head link label: {head_link.label}")
-                    print(f"head parent label: {head_link.parent.label}")
-                    if head_link.parent.label != "root":
-                        print(f"head link is not direct child of ROOT")
-                        # if connected to root then it can be the parent node
-                        # if not connected try to find a node with the same label that is connected to the root
-                        # if there is no such node, then only option is to create a node and connect it to the root
+                        if index == 0:
+                            #
+                            # head_link = self.get_head_of_link(item, score_table)
+                            # temp_node_link = None
 
-                        # FIXME: find_root_connected_link_node is not working correctly
-                        temp = self.find_root_connected_link_node(head_link.label, score_table)
+                            if item in [child.label for child in root.children]:
 
-                        print(f"found -{temp}- in the node link, as an attempt to find root connection ")
-                        # print(f"temp label: {temp.label}")
-                        if temp is None:
-                            print(f"temp is {temp}, first item :{first_item} so create new parent node that is child of root")
+                                node = [child for child in root.children if item == child.label][0]
+                                # print(type(node))
+                                assert isinstance(node, Node)
+                                nodes.append(node)
 
-                            parent_node = Node(label=first_item,
-                                               mole_num=0,
-                                               node_link=None,
-                                               parent=root)
+                            else:
+                                # if headlink parent is not root and node link dont have a link that is
+                                # direct child of root, thenn create a new node, child of root
+                                node = Node(label=item,
+                                            mole_num=0,
+                                            node_link=None,
+                                            parent=root)
+                                # add new node to the nodelink
+                                last_node = self.get_last_node_link(item, score_table)
+                                last_node.node_link = node
 
-                            last_node = self.get_last_node_link(parent_node.label, score_table)
-                            last_node.node_link = parent_node
-
-                            print(f"temp is none, parent-temp node: {parent_node}")
+                                nodes.append(node)
 
                         else:
-                            print(f"does temp work")
-                            parent_node = temp
-                            print(f"parent-temp node: {parent_node}")
 
+                            # check if the children of nodes[index - 1] has this item as a child already
+                            if item in [child.label for child in nodes[index - 1].children]:
+                                node = [child for child in nodes[index - 1].children if item == child.label][0]
+                                assert isinstance(node, Node)
+                                nodes.append(node)
 
-                        # parent_node = score_table[first_item]["head_of_link"]
+                            else:
+                                # if is item not in nodes[index-1].children then we need to create a new node
+                                node = Node(label=item,
+                                            mole_num=0,
+                                            node_link=None,
+                                            parent=nodes[index - 1])
 
-                assert parent_node is not None
-                child_nodes = [Node(label=item, mole_num=0, node_link=None, parent=parent_node) for item in
-                               mole["mole"][1:]]
+                                # add new node to the nodelink
+                                last_node = self.get_last_node_link(item, score_table)
+                                last_node.node_link = node
+                                nodes.append(node)
 
-                for child_node in child_nodes:
-                    if child_node.label not in score_table.keys():
-                        score_table[child_node.label] = dict()
-                        score_table[child_node.label]["MM"] = self.MM.get(child_node.label)
-                        score_table[child_node.label]["IL"] = self.info_loss([child_node.label])
-
-                        # if the item is not  in the score table yet, register it to the table and
-                        # make the node head of link
-                        score_table[child_node.label]["head_of_link"] = child_node
-                    else:
-                        last_node = self.get_last_node_link(child_node.label, score_table)
-                        last_node.node_link = child_node
 
         self.score_table = score_table
         # print(RenderTree(root))
