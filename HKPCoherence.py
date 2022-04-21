@@ -465,7 +465,13 @@ class HKPCoherence:
             node.mole_num = self.calculate_mole_num(node)
             print(f"Node: {node.label}, Mole num: {node.mole_num}")
 
+        # root suppose to have no fields; mole_num, nodelink etc
         root.mole_num = None
+
+        # sort items in scoretable in decreasing order or MM/IL
+        # print(score_table)
+        score_table = dict(sorted(score_table.items(),key=lambda x: x[1]["MM"]/x[1]["IL"], reverse=True))
+        print(score_table)
         self.mole_tree_root = root
         self.score_table = score_table
 
@@ -477,7 +483,7 @@ class HKPCoherence:
 
         # find rankings for the moles in the minimal moles list
 
-    def pipeline(self):
+    def greedy_algorithm(self):
         # suppress minimal moles
         self.suppress_size1_moles()
 
