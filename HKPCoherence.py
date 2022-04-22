@@ -90,6 +90,7 @@ class HKPCoherence:
         self.MM = dict()
         self.score_table = None
         self.mole_tree_root = None
+        self.suppressed_items = None
 
         self._beta_size = 0
         for index, row in enumerate(self.dataset):
@@ -213,7 +214,7 @@ class HKPCoherence:
             counter += 1
 
         self.moles = M
-        return M
+        # return M
 
     def foo(self, F, M):
         """Return (Fi+1, Mi+1)
@@ -229,12 +230,25 @@ class HKPCoherence:
         return F1, M1
 
     @staticmethod
-    def all_paths(start_node: Node):
+    def all_paths(start_node: Node) -> list:
+        """
+        Finds all the paths from the starting node to the leaf nodes
+
+        :param start_node:
+        :return: A list of paths
+        """
         skip = len(start_node.path) - 1
         return [leaf.path[skip:] for leaf in search.PreOrderIter(start_node, filter_=lambda node: node.is_leaf)]
 
     @staticmethod
     def find_subsets_of_size_n(l: list, n: int):
+        """
+        Generates subsets of size-n given a list
+
+        :param l: List of items to make subsets of
+        :param n: Size of a subset
+        :return:
+        """
         return itertools.combinations(l, n)
 
     @staticmethod
@@ -282,7 +296,13 @@ class HKPCoherence:
         return C
 
     def MM_e(self, e: int, min_moles: list) -> int:
-        """ Returns the number of minimal moles containing the public item e """
+        """
+        Returns the number of minimal moles containing the public item e
+
+        :param e: Public item
+        :param min_moles: List of minimal moles
+        :return:
+        """
         count = 0
         # i is the mole length
         for i in min_moles:
@@ -330,6 +350,7 @@ class HKPCoherence:
     def info_loss(self, e):
         """
         A function for calculating the information loss for suppressing a public item e
+
         :param e: Public item e
         :return:
         """
@@ -337,10 +358,23 @@ class HKPCoherence:
         return self.Sup(e)
 
     def calculate_mole_num(self, node: Node) -> int:
+        """
+        Calculates the mole_num attribute of a given mole tree node
+
+        :param node: A node of the mole tree
+        :return:
+        """
         return len(self.all_paths(node))
 
     @staticmethod
     def get_last_node_link(label, score_table: dict) -> Node:
+        """
+        Finds the last node of the nodelink given a public item
+
+        :param label:
+        :param score_table:
+        :return:
+        """
 
         head_node = score_table[label]["head_of_link"]
 
@@ -355,6 +389,12 @@ class HKPCoherence:
 
     @staticmethod
     def find_root_connected_link_node(label, score_table: dict):
+        """
+
+        :param label:
+        :param score_table:
+        :return:
+        """
         head_node = score_table[label]["head_of_link"]
 
         current_node = head_node
@@ -371,9 +411,20 @@ class HKPCoherence:
 
     @staticmethod
     def get_head_of_link(label, score_table: dict) -> Node:
+        """
+        Finds the head node of an item from the scoretable
+
+        :param label:
+        :param score_table:
+        :return:
+        """
         return score_table[label]["head_of_link"]
 
     def build_mole_tree(self):
+        """
+
+        :return:
+        """
         score_table = dict()
         root = Node(label='root')
         parent_node = None
@@ -383,7 +434,7 @@ class HKPCoherence:
         for mole_level in M_star.values():
             # print(f"mole level : {mole_level}")
             for mole in mole_level.values():
-                print(f"------\nmole: {mole['mole']}\nrest: {mole['mole'][1:]}")
+                # print(f"------\nmole: {mole['mole']}\nrest: {mole['mole'][1:]}")
                 # make first item of the mole a parent for the rest of the items
                 nodes = list()
                 for index, item in enumerate(mole["mole"]):
@@ -395,7 +446,7 @@ class HKPCoherence:
 
                         # make the first item of the mole a direct child of the root node
                         if index == 0:
-                            print(item)
+                            # print(item)
                             node = Node(label=item,
                                         mole_num=0,
                                         node_link=None,
@@ -406,7 +457,7 @@ class HKPCoherence:
                             score_table[item]["head_of_link"] = node
                             nodes.append(node)
                         else:
-                            print(f"item:{item}, nodes[index - 1]: {nodes[index - 1].label}")
+                            # print(f"item:{item}, nodes[index - 1]: {nodes[index - 1].label}")
                             # every item that comes after the first one should be the child of the following item
                             node = Node(label=item,
                                         mole_num=0,
@@ -463,15 +514,15 @@ class HKPCoherence:
         # travel all nodes of the tree, and assign mole numbers to each node
         for node in search.PreOrderIter(root):
             node.mole_num = self.calculate_mole_num(node)
-            print(f"Node: {node.label}, Mole num: {node.mole_num}")
+            # print(f"Node: {node.label}, Mole num: {node.mole_num}")
 
         # root suppose to have no fields; mole_num, nodelink etc
         root.mole_num = None
 
         # sort items in scoretable in decreasing order or MM/IL
         # print(score_table)
-        score_table = dict(sorted(score_table.items(),key=lambda x: x[1]["MM"]/x[1]["IL"], reverse=True))
-        print(score_table)
+        score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
+        # print(score_table)
         self.mole_tree_root = root
         self.score_table = score_table
 
@@ -483,24 +534,72 @@ class HKPCoherence:
 
         # find rankings for the moles in the minimal moles list
 
-    def greedy_algorithm(self):
+    @staticmethod
+    def print_tree(start_node: Node):
+        for pre, _, node in RenderTree(start_node):
+            treestr = u"%s%s" % (pre, node.label)
+            print(treestr.ljust(8))
+
+    def delete_subtree(self):
+        pass
+
+    def execute_algorithm(self):
         # suppress minimal moles
         self.suppress_size1_moles()
 
         # find minimal moles M* from D
-        min_moles = self.find_minimal_moles()
+        self.find_minimal_moles()
 
-        # TODO: build mole-tree for min moles
+        # Build the mole tree
         self.build_mole_tree()
-        return None
+
+        suppressed_items = set()
+
+        score_table = self.score_table
+        root = self.mole_tree_root
+
+        while score_table:
+            print(f"len;scoretable: {len(score_table)}")
+            key, value = next(iter(score_table.items()))
+
+            # add the item e with the max MM/IL to suppressed items set
+            # scoretable is already sorted in dec order of MM/IL
+            suppressed_items.add(key)
+
+            # To delete a node from the tree we can set its parent to NONE, so the node and
+            # all of its following branches will be disconnected from the rest of the tree
+
+            # get the headlink of the key
+            head_link = self.get_head_of_link(key, score_table)
+            print(f"head link: {head_link.label}")
 
 
-# def build_tree(self, M):
-#     score_table = {}
-#     root = Node()
-#     moles_MM_desc_order = self.
-#
-#     # pass
+
+            # we need to delete all the subtrees starting from headlink, and following the nodelink
+            head_link.parent = None
+            current_node = head_link
+            next_node = current_node.node_link
+
+            node_link_list = list()
+
+            while next_node is not None:
+                current_node = next_node
+                next_node = current_node.node_link
+                print(f"current node: {current_node}")
+
+                # disconnect the node from its parent, this will cut all the branch of the tree starting from this node
+                current_node.parent = None
+
+                node_link_list.append(current_node)
+
+            # print(node_link_list)
+            self.print_tree(root)
+            # check if the nodes are removed from the tree as intended
+            assert not search.findall(root,filter_=lambda node:node.label == head_link.label)
+
+            # finally delete the public item e from the score table, so we can move to the next one
+            score_table.pop(key)
+            break
 
 
 if __name__ == "__main__":
@@ -526,18 +625,19 @@ if __name__ == "__main__":
 
     hkp = HKPCoherence(dataset, public_items, private_items, h=0.8, k=2, p=2)
 
-    hkp.suppress_size1_moles()
-    M_star = hkp.find_minimal_moles()
-    hkp.build_mole_tree()
+    # hkp.suppress_size1_moles()
+    # M_star = hkp.find_minimal_moles()
+    # hkp.build_mole_tree()
+    hkp.execute_algorithm()
 
-    n0 = Node("n0")
-    n1 = Node("n1")
-    n2 = Node("n2")
-
-    n0.node_link = n1
-    n1.node_link = n2
-    test_dict = {"n0": {"head_of_link": n0}}
-    print(f"last node == {hkp.get_last_node_link(n0.label, test_dict).node_link}")
+    # n0 = Node("n0")
+    # n1 = Node("n1")
+    # n2 = Node("n2")
+    #
+    # n0.node_link = n1
+    # n1.node_link = n2
+    # test_dict = {"n0": {"head_of_link": n0}}
+    # print(f"last node == {hkp.get_last_node_link(n0.label, test_dict).node_link}")
 
     # with open("hkp_pickle.pkl", "wb") as f:
     #     pickle.dump(hkp, f)
