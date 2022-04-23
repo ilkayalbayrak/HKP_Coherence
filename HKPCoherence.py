@@ -534,14 +534,31 @@ class HKPCoherence:
 
         # find rankings for the moles in the minimal moles list
 
+
     @staticmethod
     def print_tree(start_node: Node):
         for pre, _, node in RenderTree(start_node):
             treestr = u"%s%s" % (pre, node.label)
             print(treestr.ljust(8))
 
-    def delete_subtree(self):
-        pass
+    def delete_subtree(self, node:Node, score_table:dict):
+        ancestors = [ancestor for ancestor in node.ancestors if not ancestor.is_root]
+        node.parent = None
+        node_iter = [i for i in search.PreOrderIter(node)]
+
+        for w in search.PreOrderIter(node):
+            score_table[w.label]["MM"] -= self.calculate_mole_num(w)
+            if score_table[w.label]["MM"] == 0:
+                score_table.pop(w.label)
+
+        current_node_mole_num = self.calculate_mole_num(node)
+        for w in ancestors:
+            w.mole_num -= current_node_mole_num
+            score_table[w.label]["MM"] -= current_node_mole_num
+            if w.mole_num == 0:
+                w.parent = None
+            if score_table[w.label]["MM"] == 0:
+                score_table.pop(w.label)
 
     def execute_algorithm(self):
         # suppress minimal moles
@@ -565,41 +582,42 @@ class HKPCoherence:
             # add the item e with the max MM/IL to suppressed items set
             # scoretable is already sorted in dec order of MM/IL
             suppressed_items.add(key)
+            node_link_list = list()
+            ancestor_list = list()
 
             # To delete a node from the tree we can set its parent to NONE, so the node and
             # all of its following branches will be disconnected from the rest of the tree
 
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
-            print(f"head link: {head_link.label}")
-
-
-
+            ancestor_list.append([ancestor for ancestor in head_link.ancestors if not ancestor.is_root])
+            print(f"head link: {head_link}, label: {head_link.label}")
             # we need to delete all the subtrees starting from headlink, and following the nodelink
-            head_link.parent = None
+
+
+            node_link_list.append(head_link)
             current_node = head_link
-            next_node = current_node.node_link
-
-            node_link_list = list()
-
-            while next_node is not None:
-                current_node = next_node
-                next_node = current_node.node_link
-                print(f"current node: {current_node}")
-
+            while current_node is not None:
+                ancestor_list.append([ancestor for ancestor in current_node.ancestors if not ancestor.is_root])
                 # disconnect the node from its parent, this will cut all the branch of the tree starting from this node
-                current_node.parent = None
+                # current_node.parent = None
 
                 node_link_list.append(current_node)
+                # TODO: update mole_num of ancestors
+                # get the ancestor nodes before passing None to parents
+                print(f"##############\nCurrent node: {current_node.label} mole_num: {current_node.mole_num}\n")
+                self.delete_subtree(current_node, score_table)
+                current_node = current_node.node_link
 
-            # print(node_link_list)
+
+            print(f"Ancestors list: {ancestor_list}\nNode-link list: {node_link_list}")
+
             self.print_tree(root)
-            # check if the nodes are removed from the tree as intended
-            assert not search.findall(root,filter_=lambda node:node.label == head_link.label)
+
+            assert not search.findall(root, filter_=lambda node: node.label == head_link.label)
 
             # finally delete the public item e from the score table, so we can move to the next one
-            score_table.pop(key)
-            break
+        print(score_table)
 
 
 if __name__ == "__main__":
