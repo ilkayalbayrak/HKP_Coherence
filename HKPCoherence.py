@@ -527,13 +527,10 @@ class HKPCoherence:
         self.score_table = score_table
 
         # print(RenderTree(root))
-        for pre, _, node in RenderTree(root):
-            treestr = u"%s%s" % (pre, node.label)
-            print(treestr.ljust(8))
-        print(f"Score Table: {score_table}")
+        # self.print_tree(root)
+        # print(f"Score Table: {score_table}")
 
         # find rankings for the moles in the minimal moles list
-
 
     @staticmethod
     def print_tree(start_node: Node):
@@ -541,24 +538,46 @@ class HKPCoherence:
             treestr = u"%s%s" % (pre, node.label)
             print(treestr.ljust(8))
 
-    def delete_subtree(self, node:Node, score_table:dict):
-        ancestors = [ancestor for ancestor in node.ancestors if not ancestor.is_root]
-        node.parent = None
+    @staticmethod
+    def node_link_length(head_link):
+        temp = head_link # Initialise temp
+        count = 0  # Initialise count
+
+        # Loop while end of linked list is not reached
+        while temp:
+            count += 1
+            temp = temp.node_link
+        return count
+
+    def delete_subtree(self, node: Node, score_table: dict):
+
+        # node.parent = None
         node_iter = [i for i in search.PreOrderIter(node)]
+        # node.parent = None
+        self.print_tree(node)
+        if len(node_iter) > 1:
+            for w in node_iter[1:]:
+                score_table[w.label]["MM"] -= w.mole_num
+                if score_table[w.label]["MM"] == 0:
+                    score_table.pop(w.label)
+        elif len(node_iter) == 1:
+            for w in node_iter:
+                score_table[w.label]["MM"] -= w.mole_num
+                if score_table[w.label]["MM"] == 0:
+                    score_table.pop(w.label)
+        else:
+            print(f"CAPTAIN WE MAY HAVE A PROBLEM!!")
 
-        for w in search.PreOrderIter(node):
-            score_table[w.label]["MM"] -= self.calculate_mole_num(w)
-            if score_table[w.label]["MM"] == 0:
-                score_table.pop(w.label)
-
-        current_node_mole_num = self.calculate_mole_num(node)
+        ancestors = [ancestor for ancestor in node.ancestors if not ancestor.is_root]
+        # current_node_mole_num = self.calculate_mole_num(node)
         for w in ancestors:
-            w.mole_num -= current_node_mole_num
-            score_table[w.label]["MM"] -= current_node_mole_num
+            w.mole_num -= node.mole_num
+            score_table[w.label]["MM"] -= node.mole_num
             if w.mole_num == 0:
                 w.parent = None
             if score_table[w.label]["MM"] == 0:
                 score_table.pop(w.label)
+
 
     def execute_algorithm(self):
         # suppress minimal moles
@@ -591,9 +610,9 @@ class HKPCoherence:
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
             ancestor_list.append([ancestor for ancestor in head_link.ancestors if not ancestor.is_root])
-            print(f"head link: {head_link}, label: {head_link.label}")
+            print(f"head link label: {head_link.label}, node: {head_link}")
+            print(f"head node link len: {self.node_link_length(head_link)}\n")
             # we need to delete all the subtrees starting from headlink, and following the nodelink
-
 
             node_link_list.append(head_link)
             current_node = head_link
@@ -605,16 +624,22 @@ class HKPCoherence:
                 node_link_list.append(current_node)
                 # TODO: update mole_num of ancestors
                 # get the ancestor nodes before passing None to parents
-                print(f"##############\nCurrent node: {current_node.label} mole_num: {current_node.mole_num}\n")
+                print(f"##############\n"
+                      f"Current node: {current_node.label} "
+                      f"mole_num: {current_node.mole_num}\n"
+                      f"'\naddress: {current_node}"
+                      f"###############")
                 self.delete_subtree(current_node, score_table)
+                print(f"Current node link len: {self.node_link_length(current_node)}\n")
                 current_node = current_node.node_link
-
-
-            print(f"Ancestors list: {ancestor_list}\nNode-link list: {node_link_list}")
+                # break
 
             self.print_tree(root)
+            score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
 
-            assert not search.findall(root, filter_=lambda node: node.label == head_link.label)
+            # break
+
+            # assert not search.findall(root, filter_=lambda node: node.label == head_link.label)
 
             # finally delete the public item e from the score table, so we can move to the next one
         print(score_table)
