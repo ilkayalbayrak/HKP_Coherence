@@ -387,6 +387,7 @@ class HKPCoherence:
 
         return current_node
 
+    # TODO: delete this func, it won't be used, most likely
     @staticmethod
     def find_root_connected_link_node(label, score_table: dict):
         """
@@ -540,7 +541,7 @@ class HKPCoherence:
 
     @staticmethod
     def node_link_length(head_link):
-        temp = head_link # Initialise temp
+        temp = head_link  # Initialise temp
         count = 0  # Initialise count
 
         # Loop while end of linked list is not reached
@@ -554,30 +555,37 @@ class HKPCoherence:
         # node.parent = None
         node_iter = [i for i in search.PreOrderIter(node)]
         # node.parent = None
+        print(f"{'-' * 15} Delete Subtree  {'-' * 15}\n Starting Node: {node.label}, "
+              f"MM: {score_table[node.label]['MM']} "
+              f"Subtree-length: {len(node_iter)}\nSubtree: ")
         self.print_tree(node)
-        if len(node_iter) > 1:
-            for w in node_iter[1:]:
-                score_table[w.label]["MM"] -= w.mole_num
-                if score_table[w.label]["MM"] == 0:
-                    score_table.pop(w.label)
-        elif len(node_iter) == 1:
-            for w in node_iter:
-                score_table[w.label]["MM"] -= w.mole_num
-                if score_table[w.label]["MM"] == 0:
-                    score_table.pop(w.label)
-        else:
-            print(f"CAPTAIN WE MAY HAVE A PROBLEM!!")
+        print(f"{'-' * 25}")
+        # self.print_tree(node)
+        print(f"######### Subtree iteration #########")
+        for w in node_iter:
+            print(f"w label: {w.label}, w mole-num: {w.mole_num},"
+                  f"w MM: {score_table[w.label]['MM']}\n"
+                  f"Node label: {node.label}, Node mole-num: {node.mole_num}, "
+                  f"Node MM: {score_table[node.label]['MM']}\n")
+            score_table[w.label]["MM"] -= w.mole_num
+            if score_table[w.label]["MM"] == 0:
+                # assert not search.findall(self.mole_tree_root, filter_=lambda x: x.label == w.label)
+                score_table.pop(w.label)
 
         ancestors = [ancestor for ancestor in node.ancestors if not ancestor.is_root]
         # current_node_mole_num = self.calculate_mole_num(node)
+        print(f"######### Ancestor mole_num update #########")
         for w in ancestors:
+            # FIXME node.mole_num becomes 0 after the first iteration so this does not wokr properly
+            print(f"Ancestor: {w.label}, Ancs mole-num: {w.mole_num}\n"
+                  f"Node: {node.label}, Node mole-num: {node.mole_num}\n")
             w.mole_num -= node.mole_num
             score_table[w.label]["MM"] -= node.mole_num
             if w.mole_num == 0:
                 w.parent = None
             if score_table[w.label]["MM"] == 0:
+                # assert not search.findall(self.mole_tree_root, filter_=lambda x: x.label==)
                 score_table.pop(w.label)
-
 
     def execute_algorithm(self):
         # suppress minimal moles
@@ -595,7 +603,7 @@ class HKPCoherence:
         root = self.mole_tree_root
 
         while score_table:
-            print(f"len;scoretable: {len(score_table)}")
+            print(f"Score-table length: {len(score_table)}")
             key, value = next(iter(score_table.items()))
 
             # add the item e with the max MM/IL to suppressed items set
@@ -610,8 +618,8 @@ class HKPCoherence:
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
             ancestor_list.append([ancestor for ancestor in head_link.ancestors if not ancestor.is_root])
-            print(f"head link label: {head_link.label}, node: {head_link}")
-            print(f"head node link len: {self.node_link_length(head_link)}\n")
+            # print(f"head link label: {head_link.label}, node: {head_link}")
+            # print(f"head node link len: {self.node_link_length(head_link)}\n")
             # we need to delete all the subtrees starting from headlink, and following the nodelink
 
             node_link_list.append(head_link)
@@ -624,11 +632,11 @@ class HKPCoherence:
                 node_link_list.append(current_node)
                 # TODO: update mole_num of ancestors
                 # get the ancestor nodes before passing None to parents
-                print(f"##############\n"
-                      f"Current node: {current_node.label} "
-                      f"mole_num: {current_node.mole_num}\n"
-                      f"'\naddress: {current_node}"
-                      f"###############")
+                # print(f"##############\n"
+                #       f"Current node: {current_node.label} "
+                #       f"mole_num: {current_node.mole_num}\n"
+                #       f"'\naddress: {current_node}"
+                #       f"###############")
                 self.delete_subtree(current_node, score_table)
                 print(f"Current node link len: {self.node_link_length(current_node)}\n")
                 current_node = current_node.node_link
