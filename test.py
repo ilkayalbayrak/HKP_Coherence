@@ -560,6 +560,10 @@ class HKPCoherence:
         # print(f"{'-' * 15} Delete Subtree  {'-' * 50}\n Starting Node: {node.label}, "
         #       f"MM: {score_table[node.label]['MM']} "
         #       f"Subtree-length: {len(node_iter)}\nSubtree: ")
+
+        # save mole num of start node so we can use ite later on with ancestor mole nums
+        start_node_mole_num = node.mole_num
+
         self.print_tree(node)
         print(f"{'-' * 25}")
         # self.print_tree(node)
@@ -569,7 +573,9 @@ class HKPCoherence:
             assert w.label in score_table, f"Subtree node: {w.label} with mole_num: {w.mole_num} was not in score-table"
             print(f"w: {w}\nw.label: {w.label}\nw.mole_num: {w.mole_num}")
             print("***************")
+
             score_table[w.label]["MM"] -= w.mole_num
+            w.mole_num = 0
             print(f"-CHANGE- w label: {w.label}, w MM: {score_table[w.label]['MM']}")
             if score_table[w.label]["MM"] == 0:
                 item = score_table.pop(w.label, None)
@@ -594,8 +600,8 @@ class HKPCoherence:
             # FIXME node.mole_num becomes 0 after the first iteration so this does not wokr properly
             # print(f"Ancestor: {w.label}, Ancs mole-num: {w.mole_num}, Ancs MM: {score_table[w.label]['MM']}\n"
             #       f"Node: {node.label}, Node mole-num: {node.mole_num} Node MM: {score_table[node.label]['MM']}\n")
-            w.mole_num -= node.mole_num
-            score_table[w.label]["MM"] -= node.mole_num
+            score_table[w.label]["MM"] -= start_node_mole_num
+            w.mole_num -= start_node_mole_num
             print(
                 f"-CHANGE- Ancestor label: {w.label}, Ancs mole-num: {w.mole_num}, Ancs MM: {score_table[w.label]['MM']}")
             if w.mole_num == 0:
