@@ -554,13 +554,7 @@ class HKPCoherence:
 
     def delete_subtree(self, node: Node, score_table: dict):
 
-        # node.parent = None
         node_iter = [i for i in search.PreOrderIter(node)]
-        # node.parent = None
-        # print(f"{'-' * 15} Delete Subtree  {'-' * 50}\n Starting Node: {node.label}, "
-        #       f"MM: {score_table[node.label]['MM']} "
-        #       f"Subtree-length: {len(node_iter)}\nSubtree: ")
-
         # save mole num of start node so we can use ite later on with ancestor mole nums
         start_node_mole_num = node.mole_num
 
@@ -569,55 +563,53 @@ class HKPCoherence:
         # self.print_tree(node)
         print(f"######### Subtree iteration #########")
         for w in node_iter:
-            print("*************** subtree w")
-            assert w.label in score_table, f"Subtree node: {w.label} with mole_num: {w.mole_num} was not in score-table"
-            print(f"w: {w}\nw.label: {w.label}\nw.mole_num: {w.mole_num}")
-            print("***************")
+            # Check if the item is still in the scoretable
+            if w.label not in score_table:
+                continue
 
-            score_table[w.label]["MM"] -= w.mole_num
-            w.mole_num = 0
-            print(f"-CHANGE- w label: {w.label}, w MM: {score_table[w.label]['MM']}")
-            if score_table[w.label]["MM"] == 0:
-                item = score_table.pop(w.label, None)
-                leftover = search.findall(self.mole_tree_root, filter_=lambda x: x.label == w.label)
-                leftover_total_mole_num = reduce(lambda x,y: x+y, [i.mole_num for i in leftover])
-                print(f"SUBTREE ITEM: labeled:{w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN SUBTREE ITERATION")
-                print(score_table.keys())
-                print(f"SUBTREE LEFTOVERS FOR ITEM: {w.label}, count: {len(leftover)}, MM: 0, Leftover total Mole_num: {leftover_total_mole_num}")
-                # assert not leftover
+            else:
+                # if the item is in scoretable reduce MM for the item by mole_num
+                score_table[w.label]["MM"] -= w.mole_num
+
+                # if MM(e) hits zero on scoretable, then remove the item from the scoretable
+                if score_table[w.label]["MM"] == 0:
+                    item = score_table.pop(w.label, None)
+                    leftover = search.findall(self.mole_tree_root, filter_=lambda x: x.label == w.label)
+                    leftover_total_mole_num = reduce(lambda x, y: x + y, [i.mole_num for i in leftover])
+                    print(
+                        f"SUBTREE ITEM: labeled:{w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN SUBTREE ITERATION")
+                    print(score_table.keys())
+                    print(
+                        f"SUBTREE LEFTOVERS FOR ITEM: {w.label}, count: {len(leftover)}, MM: 0, Leftover total Mole_num: {leftover_total_mole_num}")
+
+            # w.mole_num -= w.mole_num
+            # print(f"-CHANGE- w label: {w.label}, w MM: {score_table[w.label]['MM']}")
 
         ancestors = [ancestor for ancestor in node.ancestors if not ancestor.is_root]
         # current_node_mole_num = self.calculate_mole_num(node)
         print(f"######### Ancestor mole_num update #########")
         for w in ancestors:
-            # def test_st(): return True if w.label in score_table else False
-            print("*************** Ancestor w")
-            assert w.label in score_table, f"Ancestor: {w.label} with mole_num: {w.mole_num} was not in score-table "
-            print(f"w: {w}\nw.label: {w.label}\nw.mole_num: {w.mole_num} ")
-            print("***************")
-            # One of the ancestors was an item that was already deleted from the score table since mole-num == 0
-            print(f"w: {w}\nw.label: {w.label}\nw.mole_num: {w.mole_num}")
-            # FIXME node.mole_num becomes 0 after the first iteration so this does not wokr properly
-            # print(f"Ancestor: {w.label}, Ancs mole-num: {w.mole_num}, Ancs MM: {score_table[w.label]['MM']}\n"
-            #       f"Node: {node.label}, Node mole-num: {node.mole_num} Node MM: {score_table[node.label]['MM']}\n")
-            score_table[w.label]["MM"] -= start_node_mole_num
-            w.mole_num -= start_node_mole_num
-            print(
-                f"-CHANGE- Ancestor label: {w.label}, Ancs mole-num: {w.mole_num}, Ancs MM: {score_table[w.label]['MM']}")
-            if w.mole_num == 0:
-                w.parent = None
-                print(f"Node w ancestor: {w.label}, {w}\n"
-                      f"removed from the tree")
-            if score_table[w.label]["MM"] == 0:
-                print("item MM zero")
-                print(f"w: {w}\nw.label: {w.label}\nw.mole_num: {w.mole_num}")
-                # assert not search.findall(self.mole_tree_root, filter_=lambda x: x.label==)
-                item = score_table.pop(w.label,None)
-                print(f"ITEM: {w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN ANCESTOR UPDATE")
-                leftover = search.findall(self.mole_tree_root, filter_=lambda x: x.label == w.label)
-                print(
-                    f"ANCESTOR ITEM: labeled:{w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN SUBTREE ITERATION")
-                print(f"ANCESTOR LEFTOVERS FOR ITEM: {w.label}, count: {len(leftover)}, MM: 0")
+            if w.label not in score_table:
+                # If item w not in scoretable, cut the node
+                continue
+            else:
+                score_table[w.label]["MM"] -= start_node_mole_num
+                w.mole_num -= start_node_mole_num
+
+                if w.mole_num == 0:
+                    w.parent = None
+                    print(f"Node w ancestor: {w.label}, {w}\n"
+                          f"removed from the tree")
+                if score_table[w.label]["MM"] == 0:
+                    print("item MM zero")
+                    print(f"w: {w}\nw.label: {w.label}\nw.mole_num: {w.mole_num}")
+                    # assert not search.findall(self.mole_tree_root, filter_=lambda x: x.label==)
+                    item = score_table.pop(w.label, None)
+                    print(f"ITEM: {w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN ANCESTOR UPDATE")
+                    leftover = search.findall(self.mole_tree_root, filter_=lambda x: x.label == w.label)
+                    print(
+                        f"ANCESTOR ITEM: labeled:{w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN SUBTREE ITERATION")
+                    print(f"ANCESTOR LEFTOVERS FOR ITEM: {w.label}, count: {len(leftover)}, MM: 0")
 
     def execute_algorithm(self):
         # suppress minimal moles
@@ -655,22 +647,15 @@ class HKPCoherence:
             test_len = self.node_link_length(head_link)
             # we need to delete all the subtrees starting from headlink, and following the nodelink
             print(
-                f"ITEM: {head_link.label}, NODELINK LEN: {self.node_link_length(head_link)}############################################################")
+                f"ITEM: {head_link.label}, NODELINK LEN: {self.node_link_length(head_link)} ############################"
+                f"################################\n{score_table.keys()}")
             # node_link_list.append(head_link)
             current_node = head_link
             while current_node is not None:
-                # ancestor_list.append([ancestor for ancestor in current_node.ancestors if not ancestor.is_root])
-                # disconnect the node from its parent, this will cut all the branch of the tree starting from this node
-                # current_node.parent = None
+
 
                 node_link_list.append(current_node)
-                # TODO: update mole_num of ancestors
-                # get the ancestor nodes before passing None to parents
-                # print(f"##############\n"
-                #       f"Current node: {current_node.label} "
-                #       f"mole_num: {current_node.mole_num}\n"
-                #       f"'\naddress: {current_node}"
-                #       f"###############")
+
                 self.delete_subtree(current_node, score_table)
                 print(f"Current node link len: {self.node_link_length(current_node)} after deletion of previous one: \n")
                 current_node = current_node.node_link
@@ -700,7 +685,7 @@ if __name__ == "__main__":
     np.random.seed(42)
     private_items = np.random.choice(unique_items, replace=False, size=10)
     public_items = [i for i in unique_items if i not in private_items]
-    public_items = public_items[:50]
+    public_items = public_items[:20]
     print(f"private: {len(private_items)}\npublic: {len(public_items)}")
 
     dataset = []
