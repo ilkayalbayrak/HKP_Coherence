@@ -1,0 +1,4 @@
+when a node hits mole-num==0
+
+Problem Scoretable MM hits 0, but when I find all the nodes with label w from the tree, sum of their mole_nums is
+not 0

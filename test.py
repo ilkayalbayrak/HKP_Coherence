@@ -669,7 +669,8 @@ class HKPCoherence:
             # assert not search.findall(root, filter_=lambda node: node.label == head_link.label)
 
             # finally delete the public item e from the score table, so we can move to the next one
-        print(score_table)
+        if not score_table:
+            print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}")
 
 
 if __name__ == "__main__":
