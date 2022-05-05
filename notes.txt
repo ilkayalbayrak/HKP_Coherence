@@ -2,3 +2,12 @@ when a node hits mole-num==0
 
 Problem Scoretable MM hits 0, but when I find all the nodes with label w from the tree, sum of their mole_nums is
 not 0
+
+In some cases an item (or multiple I have seen max 2) is suppressed or rather is in the suppressed items list, however, it still exists in score-table
+This event should not happen, if an item is suppressed it should absolutely be removed from the  score-table
+
+on delete subtree, eventually there comes a point the parent of the node we pass to the function raises the error:
+    AttributeError: 'NoneType' object has no attribute 'label' (after longer inspection node.parent is not an instance of Node which is wrong, it should be a node in every case)
+    ThIS SHOULD NOT HAPPEN BECAUSE ALL NODES HAVE THE LABEL ATTRIBUTE
+        When infinite loop happens because of the items that cant be deleted from scoretable for some reason
+        there is NO Attribute error issue

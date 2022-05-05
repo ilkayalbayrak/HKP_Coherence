@@ -553,6 +553,10 @@ class HKPCoherence:
         return count
 
     def delete_subtree(self, node: Node, score_table: dict):
+        print("----Initiate delete_subtree----")
+        assert isinstance(node.parent, Node), node.label
+        print(f"Delete subtree of item:, mole_num: {node.mole_num}, "
+              f"parent: {node.parent.label}, node_link: {node.node_link}")
 
         node_iter = [i for i in search.PreOrderIter(node)]
         # save mole num of start node so we can use ite later on with ancestor mole nums
@@ -574,13 +578,9 @@ class HKPCoherence:
                 # if MM(e) hits zero on scoretable, then remove the item from the scoretable
                 if score_table[w.label]["MM"] == 0:
                     item = score_table.pop(w.label, None)
-                    leftover = search.findall(self.mole_tree_root, filter_=lambda x: x.label == w.label)
-                    leftover_total_mole_num = reduce(lambda x, y: x + y, [i.mole_num for i in leftover])
                     print(
                         f"SUBTREE ITEM: labeled:{w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN SUBTREE ITERATION")
-                    print(score_table.keys())
-                    print(
-                        f"SUBTREE LEFTOVERS FOR ITEM: {w.label}, count: {len(leftover)}, MM: 0, Leftover total Mole_num: {leftover_total_mole_num}")
+                    print(f"Updated Score-table length: {score_table.keys()}")
 
             # w.mole_num -= w.mole_num
             # print(f"-CHANGE- w label: {w.label}, w MM: {score_table[w.label]['MM']}")
@@ -598,18 +598,12 @@ class HKPCoherence:
 
                 if w.mole_num == 0:
                     w.parent = None
-                    print(f"Node w ancestor: {w.label}, {w}\n"
-                          f"removed from the tree")
+                    print(f"Ancestor node w : {w.label}, mole_num: {w.mole_num} {w}"
+                          f"was cut from the tree")
                 if score_table[w.label]["MM"] == 0:
-                    print("item MM zero")
-                    print(f"w: {w}\nw.label: {w.label}\nw.mole_num: {w.mole_num}")
-                    # assert not search.findall(self.mole_tree_root, filter_=lambda x: x.label==)
                     item = score_table.pop(w.label, None)
-                    print(f"ITEM: {w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN ANCESTOR UPDATE")
-                    leftover = search.findall(self.mole_tree_root, filter_=lambda x: x.label == w.label)
-                    print(
-                        f"ANCESTOR ITEM: labeled:{w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN SUBTREE ITERATION")
-                    print(f"ANCESTOR LEFTOVERS FOR ITEM: {w.label}, count: {len(leftover)}, MM: 0")
+                    print(f"ANCESTOR ITEM: {w.label} -> {item} WAS POPPED FROM THE SCORE TABLE IN ANCESTOR UPDATE")
+                    print(f"Updated Score-table length: {score_table.keys()}")
 
     def execute_algorithm(self):
         # suppress minimal moles
@@ -626,9 +620,11 @@ class HKPCoherence:
         score_table = self.score_table
         root = self.mole_tree_root
 
+        self.print_tree(root)
         while score_table:
-            print(f"Score-table length: {len(score_table)}")
             key, value = next(iter(score_table.items()))
+            print(f"Score-table length before suppression of item {key}: {len(score_table)}")
+
 
             # add the item e with the max MM/IL to suppressed items set
             # scoretable is already sorted in dec order of MM/IL
@@ -663,6 +659,8 @@ class HKPCoherence:
 
             self.print_tree(root)
             score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
+            print(f"Items in Score-table: {score_table.keys()}\n"
+                  f"Score-table length: {len(score_table.keys())}")
 
             # break
 
