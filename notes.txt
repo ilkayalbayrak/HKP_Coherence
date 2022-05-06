@@ -11,3 +11,11 @@ on delete subtree, eventually there comes a point the parent of the node we pass
     ThIS SHOULD NOT HAPPEN BECAUSE ALL NODES HAVE THE LABEL ATTRIBUTE
         When infinite loop happens because of the items that cant be deleted from scoretable for some reason
         there is NO Attribute error issue
+
+        The MAIN ISSUE: Parent of the "current node" is none, because at some point it was a parent of another node and
+                        at that time while dealing with ancestor nodes its mole_num reached 0, then we cut it from the
+                        tree, therefore the parent of our current node is NONE, because it was cut oof from the tree
+
+When we reduce the mole_num of the ancestor nodes, mole_num reaches 0 before
+
+!!! if root is the only ancestor, maybe we need to cut the current node from the tree !!!
