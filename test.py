@@ -350,6 +350,10 @@ class HKPCoherence:
                 sorted(mole_dict.items(), key=lambda itm: itm[1]["mm_count"], reverse=True))
 
         self.MM = items_mm_count
+
+        with open("Pickles/hkp_MM.pkl", "wb") as f:
+            pickle.dump(self.MM, f)
+
         return ordered_moles
 
     def info_loss(self, e):
@@ -433,9 +437,12 @@ class HKPCoherence:
         """
         score_table = dict()
         root = Node(label='root')
-        parent_node = None
         # MM(e) rankings of the items that are parts of the moles
         M_star = self.MM_desc_order(self.moles)
+
+        with open("Pickles/hkp_minimal_moles.pkl", "wb") as f:
+            pickle.dump(M_star, f)
+
         # print(M_sta)
         for mole_level in M_star.values():
             # print(f"mole level : {mole_level}")
@@ -532,6 +539,12 @@ class HKPCoherence:
         self.mole_tree_root = root
         # self.original_mole_tree = root.copy()
         self.score_table = score_table
+
+        with open("Pickles/hkp_mole_tree_root.pkl", "wb") as f:
+            pickle.dump(self.mole_tree_root, f)
+
+        with open("Pickles/hkp_score_table.pkl", "wb") as f:
+            pickle.dump(self.score_table, f)
 
         # print(RenderTree(root))
         # self.print_tree(root)
@@ -698,6 +711,8 @@ class HKPCoherence:
 
 
 
+
+
 if __name__ == "__main__":
     DATA_PATH = "./Dataset/T40I10D100K_100.txt"
 
@@ -726,6 +741,10 @@ if __name__ == "__main__":
     # hkp.build_mole_tree()
     hkp.execute_algorithm()
 
+    # pickle the hkp object for later use
+    with open("hkp_pickle.pkl", "wb") as f:
+        pickle.dump(hkp, f)
+
     # n0 = Node("n0")
     # n1 = Node("n1")
     # n2 = Node("n2")
@@ -735,8 +754,7 @@ if __name__ == "__main__":
     # test_dict = {"n0": {"head_of_link": n0}}
     # print(f"last node == {hkp.get_last_node_link(n0.label, test_dict).node_link}")
 
-    # with open("hkp_pickle.pkl", "wb") as f:
-    #     pickle.dump(hkp, f)
+
 
     # l = [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4], [2, 6]]
     # root = Node(label="root")
