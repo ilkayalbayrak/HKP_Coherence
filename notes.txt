@@ -19,3 +19,5 @@ on delete subtree, eventually there comes a point the parent of the node we pass
 When we reduce the mole_num of the ancestor nodes, mole_num reaches 0 before
 
 !!! if root is the only ancestor, maybe we need to cut the current node from the tree !!!
+
+score table MM, goes below zero in some cases, it probably means that we are miscalculating the mole_nums
