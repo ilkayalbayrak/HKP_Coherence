@@ -5,7 +5,9 @@ import time
 import itertools
 import pickle
 
-from anytree import AnyNode, NodeMixin, RenderTree, search
+from anytree import NodeMixin, RenderTree, search
+
+import utils
 
 '''
     #######- GREEDY ALGORITHM -#######
@@ -18,27 +20,6 @@ from anytree import AnyNode, NodeMixin, RenderTree, search
 '''
 
 
-def find_subarrays_of_size_n(l: list, n: int):
-    """
-
-    :param l: The list of elements
-    :param n: Number of elements in a sub-array
-    :return: A map object containing the n-length sub-arrays
-    """
-    return itertools.combinations(l, n)
-
-
-def find_unique_items(input_file):
-    with open(input_file, "r") as file:
-        lines = file.read()
-        unique_items = set(lines.split())
-
-        return unique_items
-
-
-# FIXME: Score table could be a dict
-# class ScoreTable:
-#     def __init__(self, ):
 class Node(NodeMixin):
     def __init__(self, label=None, mole_num=None, node_link=None, parent=None, children=None):
         """
@@ -287,7 +268,7 @@ class HKPCoherence:
         n = len(F[0]) + 1
         print(n)
 
-        size_n_subsets = find_subarrays_of_size_n(list(F_items), n)
+        size_n_subsets = utils.find_subarrays_of_size_n(list(F_items), n)
         for subset in size_n_subsets:
             flag = False
             for m in M:
@@ -668,6 +649,7 @@ class HKPCoherence:
 
         self.print_tree(root)
         while score_table:
+            # Get the next item in the score_table. Since we
             key, value = next(iter(score_table.items()))
             print(f"\n----------- INITIATE SUPPRESSION OF ITEM {key} FROM SCORE TABLE -----------")
             print(f"Score-table length is {len(score_table)} before suppression of item {key}")
@@ -724,52 +706,3 @@ class HKPCoherence:
                 for t in self.transactions:
                     if e in t.public:
                         t.public.remove(e)
-
-
-if __name__ == "__main__":
-    DATA_PATH = "./Dataset/T40I10D100K_100.txt"
-
-    # find unique items to randomly choose the private items among them
-    unique_items = find_unique_items(DATA_PATH)
-    unique_items = [int(i) for i in unique_items]
-    print(f"Number of Unique items: {len(unique_items)}")
-
-    # randomly choose private items
-    # dataset =
-    np.random.seed(42)
-    private_items = np.random.choice(unique_items, replace=False, size=10)
-    public_items = [i for i in unique_items if i not in private_items]
-    public_items = public_items[:50]
-    print(f"private: {len(private_items)}\npublic: {len(public_items)}")
-
-    dataset = []
-    with open(DATA_PATH, "r") as file:
-        for line in file:
-            dataset.append([int(i) for i in set(line.rstrip().split())])
-
-    # create an obj
-    hkp = HKPCoherence(dataset, public_items, private_items, h=0.8, k=2, p=2)
-
-    # start the anonymization process
-    hkp.execute_algorithm()
-
-    # pickle the hkp object for later use
-    with open("hkp_complete_object.pkl", "wb") as f:
-        pickle.dump(hkp, f)
-
-    # n0 = Node("n0")
-    # n1 = Node("n1")
-    # n2 = Node("n2")
-    #
-    # n0.node_link = n1
-    # n1.node_link = n2
-    # test_dict = {"n0": {"head_of_link": n0}}
-    # print(f"last node == {hkp.get_last_node_link(n0.label, test_dict).node_link}")
-
-    # l = [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4], [2, 6]]
-    # root = Node(label="root")
-    # # print(m1.children ==)
-    # if not root.children:
-    #     print("empty")
-    # print(l[0][1])
-    # build_tree(l)
