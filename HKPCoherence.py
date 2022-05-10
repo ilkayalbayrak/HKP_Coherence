@@ -522,8 +522,9 @@ class HKPCoherence:
         # self.original_mole_tree = root.copy()
         self.score_table = score_table
 
-        with open("Pickles/hkp_mole_tree_root.pkl", "wb") as f:
-            pickle.dump(self.mole_tree_root, f)
+        # FIXME: While pickling max recursion error is raised
+        # with open("Pickles/hkp_mole_tree_root.pkl", "wb") as f:
+        #     pickle.dump(self.mole_tree_root, f)
 
         with open("Pickles/hkp_score_table.pkl", "wb") as f:
             pickle.dump(self.score_table, f)
@@ -536,6 +537,7 @@ class HKPCoherence:
 
     @staticmethod
     def print_tree(start_node: Node):
+        print(f"\nTree Starting from Node: {start_node.label}")
         for pre, _, node in RenderTree(start_node):
             treestr = u"%s%s" % (pre, node.label)
             print(treestr.ljust(8))
