@@ -635,14 +635,21 @@ class HKPCoherence:
         print("----------------------------")
 
     def execute_algorithm(self):
+        time_dict = dict()
         # suppress minimal moles
         self.suppress_size1_moles()
 
+        start_time = time.time()
         # find minimal moles M* from D
         self.find_minimal_moles()
+        time_passed = int(start_time - time.time())
+        time_dict["find_min_moles"] = time_passed
 
+        start_time = time.time()
         # Build the mole tree
         self.build_mole_tree()
+        time_passed = int(start_time - time.time())
+        time_dict["build_mole_tree"] = time_passed
 
         suppressed_items = set()
 
@@ -708,3 +715,11 @@ class HKPCoherence:
                 for t in self.transactions:
                     if e in t.public:
                         t.public.remove(e)
+        print("Preparing Anonymized txt file")
+        with open(r'Dataset/Anonymized/anon_T40.txt', 'w') as f:
+            for t in self.transactions:
+                # merge public and private lists to get full transaction
+                # merge = t.public + t.private
+                merge = ' '.join(map(str, t.public+t.private))
+                f.write(f"{merge}\n")
+            print('Done')
