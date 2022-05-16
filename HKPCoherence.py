@@ -73,10 +73,10 @@ class HKPCoherence:
         self.MM = dict()
         self.score_table = None
         self.mole_tree_root = None
-        self.original_mole_tree = None
+        # self.original_mole_tree = None
         self.suppressed_items = None
-
-        self._beta_size = 0
+        self.finished_public_items = None
+        # self._beta_size = 0
         for index, row in enumerate(self.dataset):
             # TODO:
             public = [i for i in row if i not in private_item_list]
@@ -153,6 +153,43 @@ class HKPCoherence:
         print(
             f"Suppressed {len(self.size1_moles)} size-1 mole public items. Time passed: {int(time.time() - start_time)}")
 
+    def anonymization_verifier(self):
+
+        C1 = self.finished_public_items
+        M1 = list()
+        F1 = list()
+
+        for e in C1:
+            if self.is_mole([e]):
+                M1.append([e])
+            else:
+                F1.append([e])
+
+        F = [F1]
+        M = [M1]
+        del F1, M1, C1
+        # FIXME: this may need to start from 1 instead of 0
+        i = 0
+        while i < self.p and len(F[i]) > 0:
+            print(f"\nStarted i:{i} and len(F[i]):{len(F[i])}")
+            time_a = time.time()
+            # generate Canditate set for Mi+1 and Fi+1
+            F_, M_ = self.generate_M_F(F[i], M[i])
+            F.append(F_)
+            M.append(M_)
+            i += 1
+            print(f"M-F calculation time for i:{i} is {time.time() - time_a} seconds")
+
+        anonymized = True
+        for possible_mole in M:
+            if len(possible_mole) != 0:
+                print(f"Anonymization FAILED, size - {len(possible_mole)} moles: {possible_mole}")
+                anonymized = False
+        if anonymized:
+            print(f"Anonymization SUCCEED, parameters - h: {self.h}, k: {self.k}, p: {self.p}")
+
+        # pass
+
     # MM(e) is the number of minimal moles containing the item e
     def find_minimal_moles(self):
 
@@ -182,7 +219,7 @@ class HKPCoherence:
             print(f"\nStarted i:{i} and len(F[i]):{len(F[i])}")
             time_a = time.time()
             # generate Canditate set for Mi+1 and Fi+1
-            F_, M_ = self.foo(F[i], M[i])
+            F_, M_ = self.generate_M_F(F[i], M[i])
             F.append(F_)
             M.append(M_)
             i += 1
@@ -200,7 +237,7 @@ class HKPCoherence:
         self.moles = M
         # return M
 
-    def foo(self, F, M):
+    def generate_M_F(self, F, M):
         """Return (Fi+1, Mi+1)
         """
         M1 = list()
@@ -241,6 +278,7 @@ class HKPCoherence:
     def diff_list(L1, L2):
         return len(set(L1).symmetric_difference(set(L2)))
 
+
     # @staticmethod
     def generate_C(self, F: list, M: list) -> list:
         """
@@ -252,33 +290,19 @@ class HKPCoherence:
         # this is basically a list of betas
         # for Fi and Fi+1
 
-        # print(len(F))
-        # print(len(F[2]))
-        start_time = time.time()
-        print(f"Started generating Candidate list, len(M):{len(M)}, len(F):{len(F)}")
         C = list()
-        # TODO: Use find subsets function to calculate the Fi+1
-        # l = [[1, 2], [1, 3], [1, 4], [1, 5], [2, 3], [2, 4], [2, 6]]
-        F_items = set()
-        for i in F:
-            for j in i:
-                F_items.add(j)
-
-        # Length of Fi+1 beta
-        n = len(F[0]) + 1
-        print(n)
-
-        size_n_subsets = utils.find_subarrays_of_size_n(list(F_items), n)
-        for subset in size_n_subsets:
-            flag = False
-            for m in M:
-                if set(subset).issuperset(m):
-                    flag = True
-                    continue
-            if not flag:
-                C.append(list(subset))
-
-        print(f"Finished generating candidate list len(C):{len(C)}, time-passed:{time.time() - start_time}")
+        for i in range(len(F)):
+            for j in range(i + 1, len(F)):
+                if self.diff_list(F[i], F[j]) == 2:
+                    new_F = list(F[i])
+                    new_F.extend(x for x in F[j] if x not in new_F)
+                    flag = False
+                    for m in M:
+                        if set(new_F).issuperset(m):
+                            flag = True
+                            break
+                    if not flag:
+                        C.append(new_F)
         return C
 
     def MM_e(self, e: int, min_moles: list) -> int:
@@ -526,8 +550,8 @@ class HKPCoherence:
         # with open("Pickles/hkp_mole_tree_root.pkl", "wb") as f:
         #     pickle.dump(self.mole_tree_root, f)
 
-        with open("Pickles/hkp_score_table.pkl", "wb") as f:
-            pickle.dump(self.score_table, f)
+        # with open("Pickles/hkp_score_table.pkl", "wb") as f:
+        #     pickle.dump(self.score_table, f)
 
         # print(RenderTree(root))
         # self.print_tree(root)
@@ -706,6 +730,8 @@ class HKPCoherence:
         if not score_table:
             print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}")
+            self.suppressed_items = suppressed_items
+            self.finished_public_items = [i for i in self.public_item_list if i not in suppressed_items]
             self.print_tree(root)
             for node in search.PreOrderIter(root):
                 print(f"Label: {node.label}, mole_num: {node.mole_num}")
@@ -716,10 +742,18 @@ class HKPCoherence:
                     if e in t.public:
                         t.public.remove(e)
         print("Preparing Anonymized txt file")
-        with open(r'Dataset/Anonymized/anon_T40.txt', 'w') as f:
+        with open(r'Dataset/Anonymized/public.txt', 'w') as f:
             for t in self.transactions:
                 # merge public and private lists to get full transaction
                 # merge = t.public + t.private
-                merge = ' '.join(map(str, t.public+t.private))
+                merge = ' '.join(map(str, t.public))
+                f.write(f"{merge}\n")
+            print('Done')
+
+        with open(r'Dataset/Anonymized/private.txt', 'w') as f:
+            for t in self.transactions:
+                # merge public and private lists to get full transaction
+                # merge = t.public + t.private
+                merge = ' '.join(map(str, t.private))
                 f.write(f"{merge}\n")
             print('Done')

@@ -12,10 +12,10 @@ if __name__ == "__main__":
     DATA_PATH = "./Dataset/T40I10D100K_1000.txt"
 
     # PARAMETERS
-    H = 0.4
-    K = 30
-    P = 4
-    SIGMA = 0.05  # percentage of public items selected from the dataset
+    H = 0.8
+    K = 2
+    P = 2
+    SIGMA = 0.15  # percentage of public items selected from the dataset
 
     # set a random seed
     np.random.seed(42)
@@ -48,6 +48,7 @@ if __name__ == "__main__":
 
     # start the anonymization process
     hkp.execute_algorithm()
+    hkp.anonymization_verifier()
 
     # pickle the hkp object for later use
     with open("hkp_complete_object.pkl", "wb") as f:
