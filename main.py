@@ -12,10 +12,10 @@ if __name__ == "__main__":
     DATA_PATH = "./Dataset/T40I10D100K_1000.txt"
 
     # PARAMETERS
-    H = 0.8
-    K = 2
+    H = 0.4
+    K = 30
     P = 2
-    SIGMA = 0.15  # percentage of public items selected from the dataset
+    SIGMA = 0.08  # percentage of public items selected from the dataset
 
     # set a random seed
     np.random.seed(42)

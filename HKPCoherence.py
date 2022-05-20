@@ -76,12 +76,14 @@ class HKPCoherence:
         # self.original_mole_tree = None
         self.suppressed_items = None
         self.finished_public_items = None
-        # self._beta_size = 0
+        self.total_occurrence_count = 0  # sum of all item occurrences in dataset
+        self.suppressed_item_occurrence_count = 0  # supp item occurrence count
         for index, row in enumerate(self.dataset):
             # TODO:
             public = [i for i in row if i not in private_item_list]
             private = [i for i in row if i in private_item_list]
             self.transactions.append(Transaction(index, public, private))
+            self.total_occurrence_count += len(row)
 
     def Sup(self, beta) -> int:
         """
@@ -216,7 +218,7 @@ class HKPCoherence:
         # FIXME: this may need to start from 1 instead of 0
         i = 0
         while i < self.p and len(F[i]) > 0:
-            print(f"\nStarted i:{i} and len(F[i]):{len(F[i])}")
+            print(f"\nStarted i:{i}, len(F[{i}]):{len(F[i])}, len(M[{i}]):{len(M[i])}")
             time_a = time.time()
             # generate Canditate set for Mi+1 and Fi+1
             F_, M_ = self.generate_M_F(F[i], M[i])
@@ -240,6 +242,7 @@ class HKPCoherence:
     def generate_M_F(self, F, M):
         """Return (Fi+1, Mi+1)
         """
+        print(f"Generate M-F, F: {len(F)}, M: {len(M)}")
         M1 = list()
         F1 = list()
         C1 = self.generate_C(F, M)
@@ -289,6 +292,46 @@ class HKPCoherence:
         """
         # this is basically a list of betas
         # for Fi and Fi+1
+        # unique_items = set()
+        # for i in range(len(F)):
+        #     for j in F[i]:
+        #         unique_items.add(j)
+        #
+        # C = list()
+        # for i in range(len(F)):
+        #     for j in unique_items:
+        #         new_F = list(F[i])
+        #         if j not in new_F:
+        #             new_F.append(j)
+        #             flag = False
+        #
+        #             for m in M:
+        #                 if set(new_F).issuperset(m):
+        #                     flag = True
+        #                     break
+        #             if not flag:
+        #                 C.append(new_F)
+
+        # C = list()
+        # F_items = set()
+        # for i in F:
+        #     for j in i:
+        #         F_items.add(j)
+        #
+        # # Length of Fi+1 beta
+        # n = len(F[0]) + 1
+        # print(n)
+        #
+        # size_n_subsets = utils.find_subarrays_of_size_n(list(F_items), n)
+        # for subset in size_n_subsets:
+        #     flag = False
+        #     for m in M:
+        #         if set(subset).issuperset(m):
+        #             flag = True
+        #             continue
+        #     if not flag:
+        #         C.append(list(subset))
+
 
         C = list()
         for i in range(len(F)):
@@ -303,6 +346,7 @@ class HKPCoherence:
                             break
                     if not flag:
                         C.append(new_F)
+
         return C
 
     def MM_e(self, e: int, min_moles: list) -> int:
@@ -321,6 +365,13 @@ class HKPCoherence:
                     count += 1
 
         return count
+
+    def calculate_distortion(self) -> float:
+        # S/N
+        # S sum info loss of suppressed items
+        # N occurrence of all items
+        return self.suppressed_item_occurrence_count / self.total_occurrence_count
+
 
     def MM_desc_order(self, min_moles: list) -> dict:
         """
@@ -374,7 +425,7 @@ class HKPCoherence:
     def calculate_mole_num(self, node: Node) -> int:
         """
         Calculates the mole_num attribute of a given mole tree node
-
+delete
         :param node: A node of the mole tree
         :return:
         """
@@ -600,7 +651,7 @@ class HKPCoherence:
 
         # cut the subtree at node from the complete mole tree
         # setting the parent of the node to None is an easy way of removing the subtree
-        node.parent = None
+        # node.parent = None
 
         self.print_tree(node)
         print(f"{'-' * 25}")
@@ -633,6 +684,7 @@ class HKPCoherence:
         # current_node_mole_num = self.calculate_mole_num(node)
         print(f"\n######### Ancestor mole_num update #########")
         for w in ancestors:
+
             if w.label not in score_table:
                 print(f"ANCESTOR ITEM, label: {w.label}, mole_num: {w.mole_num} NOT IN THE SCORE TABLE")
                 # If item w not in scoretable, cut the node
@@ -648,7 +700,7 @@ class HKPCoherence:
                 #     print(
                 #         f"###--- ANCESTOR ITEM {w.label}, MM: {score_table[w.label]['MM']}, MM below ZERO ---###")
 
-                if w.mole_num <= 0:
+                if w.mole_num == 0:
                     w.parent = None
                     print(f"Ancestor node w : {w.label}, mole_num: {w.mole_num} {w}"
                           f"was cut from the tree")
@@ -732,6 +784,10 @@ class HKPCoherence:
                   f"Suppressed items length: {len(suppressed_items)}")
             self.suppressed_items = suppressed_items
             self.finished_public_items = [i for i in self.public_item_list if i not in suppressed_items]
+            for row in self.dataset:
+                for item in row:
+                    if item in self.suppressed_items:
+                        self.suppressed_item_occurrence_count += 1
             self.print_tree(root)
             for node in search.PreOrderIter(root):
                 print(f"Label: {node.label}, mole_num: {node.mole_num}")
@@ -741,6 +797,9 @@ class HKPCoherence:
                 for t in self.transactions:
                     if e in t.public:
                         t.public.remove(e)
+
+            distortion = self.calculate_distortion()
+            print(f"DISTORTION: {distortion}")
         print("Preparing Anonymized txt file")
         with open(r'Dataset/Anonymized/public.txt', 'w') as f:
             for t in self.transactions:
