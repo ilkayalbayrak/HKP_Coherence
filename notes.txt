@@ -28,3 +28,25 @@ score table MM, goes below zero in some cases, it probably means that we are mis
 [] CALCULATE DATA DISTORTION
 when generating C, F needs to go down and M needs to go up but M stays zero while
 F len increases
+
+[] mole_num != MM, in some cases, normally they should be equal but sometimes MM > mole_num
+[] in ancestor seaarch part, firstly check if w.label exists in scoretable, because it may have been popped from ST
+    but w.label can still exist as a node in the tree, hence it could be an ancestor. So when we say ST[w.label][MM]
+    we may accidentally cause a keyError
+
+    ----------- INITIATE SUPPRESSION OF ITEM 116 FROM SCORE TABLE -----------
+Score-table length is 12 before suppression of item 116
+SUPPRESSED ITEMS LIST: {512, 385, 530, 279, 793, 415, 33, 674, 804, 39, 809, 172, 173, 175, 308, 54, 55, 569, 58, 576, 712, 75, 204, 333, 461, 983, 858, 349, 351, 736, 100, 879, 241, 116, 634, 254, 511}
+0 NOT EQUAL -- Item: 116, Score_table MM: -52351, mole num count: 0
+1 NOT EQUAL -- Item: 100, Score_table MM: -41881, mole num count: 0
+2 NOT EQUAL -- Item: 736, Score_table MM: -77319, mole num count: 0
+3 NOT EQUAL -- Item: 254, Score_table MM: -48325, mole num count: 0
+4 NOT EQUAL -- Item: 349, Score_table MM: -60411, mole num count: 0
+5 NOT EQUAL -- Item: 983, Score_table MM: -41080, mole num count: 0
+6 NOT EQUAL -- Item: 175, Score_table MM: -55579, mole num count: 0
+7 NOT EQUAL -- Item: 712, Score_table MM: -43502, mole num count: 0
+8 NOT EQUAL -- Item: 172, Score_table MM: -34641, mole num count: 0
+9 NOT EQUAL -- Item: 461, Score_table MM: -32235, mole num count: 0
+10 NOT EQUAL -- Item: 333, Score_table MM: -29802, mole num count: 0
+11 NOT EQUAL -- Item: 241, Score_table MM: -31905, mole num count: 0
+ITEM: 116, NODE LINK LEN: 15
