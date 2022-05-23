@@ -263,7 +263,7 @@ class HKPCoherence:
         """
         skip = len(start_node.path) - 1
         temp = [leaf.path[skip:] for leaf in search.PreOrderIter(start_node, filter_=lambda node: node.is_leaf)]
-        print(f"label: {start_node.label}, mole_num: {len(temp)}")
+        # print(f"label: {start_node.label}, mole_num: {len(temp)}")
         return temp
 
     @staticmethod
@@ -640,33 +640,49 @@ delete
         # delete all the minimal moles at the subtree node
         print("----# Subtree iter #----")
         for w in PreOrderIter(node):
-            # decrement w.MM by w.mole_num
-            score_table[w.label]["MM"] -= w.mole_num
-            assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
-                                                    f"MM: {score_table[w.label]['MM']}"
-            if score_table[w.label]["MM"] == 0:
-                # if MM == 0, then remove the item from the score-table
-                print(f"label: {w.label}, MM has become 0, thus it will be removed from the score-table")
-                del score_table[w.label]
+            if w != node:
+                print(f"label: {w.label}, mole_num: {w.mole_num}")
+                # decrement w.MM by w.mole_num
+                score_table[w.label]["MM"] -= w.mole_num
+                assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
+                                                        f"MM: {score_table[w.label]['MM']}"
+                if score_table[w.label]["MM"] == 0:
+                    # if MM == 0, then remove the item from the score-table
+                    print(f"label: {w.label}, MM has become 0, thus it will be removed from the score-table")
+                    del score_table[w.label]
+
+            # elif w == node and w.is_leaf:
+            #     score_table[w.label]["MM"] -= w.mole_num
+            #     assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
+            #                                             f"MM: {score_table[w.label]['MM']}"
+            #     if score_table[w.label]["MM"] == 0:
+            #         # if MM == 0, then remove the item from the score-table
+            #         print(f"label: {w.label}, MM has become 0, thus it will be removed from the score-table")
+            #         del score_table[w.label]
 
         print("----# Ancestors of node iter #----")
         # find all the ancestors of the node
         ancestors = [ancestor for ancestor in node.ancestors]
+        print(f"node.ancestors: {[node.label for node in ancestors]}")
         for w in ancestors:
             # check if ancestor is the root node, if it is, then dont change root.mole_num
             if not w.is_root:
+                print(f"label: {w.label}, mole_num: {w.mole_num}")
                 # decrement w.mole_num and w.MM by node.mole_num
                 w.mole_num -= node.mole_num
                 score_table[w.label]["MM"] -= node.mole_num
-                assert score_table[w.label]["MM"] >= 0 and w.mole_num >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
-                                                    f"MM: {score_table[w.label]['MM']}"
 
+                assert score_table[w.label][
+                           "MM"] >= 0 and w.mole_num >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
+                                                           f"MM: {score_table[w.label]['MM']}"
 
+                if w.mole_num == 0:
+                    print(f"label: {w.label}, mole_num has become 0, thus it will be removed from the tree")
+                    w.parent = None
 
-
-
-
-
+                if score_table[w.label]["MM"] == 0:
+                    print(f"label: {w.label}, MM has become 0, thus it will be removed from the score-table")
+                    del score_table[w.label]
 
         # update the mole_num for all ancestors of node
 
@@ -706,24 +722,24 @@ delete
             suppressed_items.add(key)
             print(f"SUPPRESSED ITEMS LIST: {suppressed_items}")
 
-
             # To delete a node from the tree we can set its parent to NONE, so the node and
             # all of its following branches will be disconnected from the rest of the tree
 
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
-            for index, item in enumerate(score_table.keys()):
-                count = 0
-                test_list = search.findall(root, filter_=lambda node: node.label == item)
-                for i in test_list:
-                    count += i.mole_num
-                # assert count == score_table[item]['MM']
-                if count != score_table[item]['MM']:
-                    print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
-                          f"mole num count: {count}")
-                else:
-                    print(
-                        f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
+
+            # for index, item in enumerate(score_table.keys()):
+            #     count = 0
+            #     test_list = search.findall(root, filter_=lambda node: node.label == item)
+            #     for i in test_list:
+            #         count += i.mole_num
+            #     # assert count == score_table[item]['MM']
+            #     if count != score_table[item]['MM']:
+            #         print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
+            #               f"mole num count: {count}")
+            #     else:
+            #         print(
+            #             f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
 
             # break
             # print(f"head link label: {head_link.label}, node: {head_link}")
@@ -731,7 +747,6 @@ delete
 
             current_node = head_link
             while current_node is not None:
-
                 self.delete_subtree(current_node, score_table)
                 current_node = current_node.node_link
 
@@ -740,7 +755,7 @@ delete
             print(f"Items in Score-table: {score_table.keys()}\n"
                   f"Score-table length: {len(score_table.keys())}")
 
-            break
+            # break
 
             # assert not search.findall(root, filter_=lambda node: node.label == head_link.label)
 
