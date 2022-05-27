@@ -428,11 +428,11 @@ delete
         """
         return len(self.all_paths(node))
 
-    @staticmethod
-    def delete_node_link(head_node, link_node, score_table: dict):
+    # @staticmethod
+    def delete_node_link(self, link_node, score_table: dict):
 
         # store head node of node-link
-        temp = head_node
+        temp = self.get_head_of_link(link_node.label, score_table)
 
         # if head node itself is the node to be deleted
         # change the head node in score table
@@ -676,10 +676,10 @@ delete
                                                     f"MM: {score_table[w.label]['MM']}"
 
             # remove the processed nodes from their respective node_links
-            head_node = self.get_head_of_link(w.label, score_table)
-            self.delete_node_link(head_node=head_node,
-                                  link_node=w,
-                                  score_table=score_table)
+            if w is not node:
+                self.delete_node_link(link_node=w,
+                                      score_table=score_table)
+
 
             if score_table[w.label]["MM"] == 0:
                 # if MM == 0, then remove the item from the score-table
@@ -729,6 +729,12 @@ delete
                     print(f"label: {w.label}, mole_num has become 0, thus it will be removed from the tree")
                     w.parent = None
 
+                    # if mole_num is 0 remove from the node link
+                    # because it is useless
+                    self.delete_node_link(link_node=w,
+                                          score_table=score_table)
+
+
                 if score_table[w.label]["MM"] == 0:
                     print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
                           f"thus it will be removed from the score-table")
@@ -761,6 +767,19 @@ delete
         score_table = self.score_table
         root = self.mole_tree_root
 
+        for index, item in enumerate(score_table.keys()):
+            count = 0
+            test_list = search.findall(root, filter_=lambda node: node.label == item)
+            for i in test_list:
+                count += i.mole_num
+            # assert count == score_table[item]['MM']
+            if count != score_table[item]['MM']:
+                print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
+                      f"mole num count: {count}")
+            else:
+                print(
+                    f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
+
         # self.print_tree(root)
         while score_table:
             # Get the next item in the score_table. Since we
@@ -778,19 +797,12 @@ delete
 
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
+            print(f"--------###### Node link details for item: {head_link.label} ######--------")
+            temp = head_link
+            while temp is not None:
+                print(f"label: {temp.label}, mole_num: {temp.mole_num}, node_link: {temp.node_link}")
+                temp = temp.node_link
 
-            # for index, item in enumerate(score_table.keys()):
-            #     count = 0
-            #     test_list = search.findall(root, filter_=lambda node: node.label == item)
-            #     for i in test_list:
-            #         count += i.mole_num
-            #     # assert count == score_table[item]['MM']
-            #     if count != score_table[item]['MM']:
-            #         print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
-            #               f"mole num count: {count}")
-            #     else:
-            #         print(
-            #             f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
 
             # break
             # print(f"head link label: {head_link.label}, node: {head_link}")

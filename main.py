@@ -14,7 +14,7 @@ if __name__ == "__main__":
     # PARAMETERS
     H = 0.4
     K = 30
-    P = 2
+    P = 3
     SIGMA = 0.04  # percentage of public items selected from the dataset
 
     # set a random seed
