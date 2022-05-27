@@ -15,7 +15,7 @@ if __name__ == "__main__":
     H = 0.4
     K = 30
     P = 2
-    SIGMA = 0.08  # percentage of public items selected from the dataset
+    SIGMA = 0.04  # percentage of public items selected from the dataset
 
     # set a random seed
     np.random.seed(42)

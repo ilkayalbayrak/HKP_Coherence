@@ -429,6 +429,32 @@ delete
         return len(self.all_paths(node))
 
     @staticmethod
+    def delete_node_link(head_node, link_node, score_table: dict):
+
+        # store head node of node-link
+        temp = head_node
+
+        # if head node itself is the node to be deleted
+        # change the head node in score table
+        if temp is not None:
+            if temp == link_node:
+                score_table[temp.label]["head_of_link"] = temp.node_link
+                return
+
+        # search the link node to be deleted, keep track of the previous node
+        # because we need to change the node_link of the node that comes #
+        # previous to the node we are looking for
+        prev_node = None
+        while temp is not link_node:
+            prev_node = temp
+            temp = temp.node_link
+
+        # connect node link of prev node to the node comes after the link_node
+        # we are looking for
+        # this way we will unlink the link_node from the node_link
+        prev_node.node_link = temp.node_link
+
+    @staticmethod
     def get_last_node_link(label, score_table: dict) -> Node:
         """
         Finds the last node of the nodelink given a public item
@@ -632,7 +658,7 @@ delete
     def delete_subtree(self, node: Node, score_table: dict):
         assert node.label in score_table.keys(), f"node: {node.label} was not in the score-table"
 
-        print(f"---- Delete Subtree ----\n"
+        print(f"\n---- Delete Subtree ----\n"
               f"node: {node.label}, mole_num: {node.mole_num}, node_link_len: {self.node_link_length(node)}, "
               f"MM: {score_table[node.label]['MM']}, "
               f"head_link: {'TRUE' if score_table[node.label]['head_of_link'] == node else 'FALSE'}")
@@ -640,17 +666,40 @@ delete
         # delete all the minimal moles at the subtree node
         print("----# Subtree iter #----")
         for w in PreOrderIter(node):
-            if w != node:
-                print(f"label: {w.label}, mole_num: {w.mole_num}")
-                # decrement w.MM by w.mole_num
-                score_table[w.label]["MM"] -= w.mole_num
-                assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
-                                                        f"MM: {score_table[w.label]['MM']}"
-                if score_table[w.label]["MM"] == 0:
-                    # if MM == 0, then remove the item from the score-table
-                    print(f"label: {w.label}, MM has become 0, thus it will be removed from the score-table")
-                    del score_table[w.label]
 
+            # print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
+            print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
+
+            # decrement w.MM by w.mole_num
+            score_table[w.label]["MM"] -= w.mole_num
+            assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
+                                                    f"MM: {score_table[w.label]['MM']}"
+
+            # remove the processed nodes from their respective node_links
+            head_node = self.get_head_of_link(w.label, score_table)
+            self.delete_node_link(head_node=head_node,
+                                  link_node=w,
+                                  score_table=score_table)
+
+            if score_table[w.label]["MM"] == 0:
+                # if MM == 0, then remove the item from the score-table
+                print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
+                      f"thus it will be removed from the score-table")
+                del score_table[w.label]
+
+            # if w != node:
+            #     print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
+            #
+            #     # decrement w.MM by w.mole_num
+            #     score_table[w.label]["MM"] -= w.mole_num
+            #     assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
+            #                                             f"MM: {score_table[w.label]['MM']}"
+            #     if score_table[w.label]["MM"] == 0:
+            #         # if MM == 0, then remove the item from the score-table
+            #         print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
+            #               f"thus it will be removed from the score-table")
+            #         del score_table[w.label]
+            #
             # elif w == node and w.is_leaf:
             #     score_table[w.label]["MM"] -= w.mole_num
             #     assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
@@ -681,11 +730,13 @@ delete
                     w.parent = None
 
                 if score_table[w.label]["MM"] == 0:
-                    print(f"label: {w.label}, MM has become 0, thus it will be removed from the score-table")
+                    print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
+                          f"thus it will be removed from the score-table")
                     del score_table[w.label]
+            # else:
 
-        # update the mole_num for all ancestors of node
-
+        # lastly remove the node from tree
+        node.parent = None
         print("----------------------------")
 
     def execute_algorithm(self):
