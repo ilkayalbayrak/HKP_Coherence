@@ -14,7 +14,7 @@ if __name__ == "__main__":
     # PARAMETERS
     H = 0.4
     K = 30
-    P = 3
+    P = 2
     SIGMA = 0.04  # percentage of public items selected from the dataset
 
     # set a random seed
@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     # start the anonymization process
     hkp.execute_algorithm()
-    hkp.anonymization_verifier()
+    # hkp.anonymization_verifier()
 
     # pickle the hkp object for later use
     with open("hkp_complete_object.pkl", "wb") as f:

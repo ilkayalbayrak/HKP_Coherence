@@ -291,46 +291,6 @@ class HKPCoherence:
         """
         # this is basically a list of betas
         # for Fi and Fi+1
-        # unique_items = set()
-        # for i in range(len(F)):
-        #     for j in F[i]:
-        #         unique_items.add(j)
-        #
-        # C = list()
-        # for i in range(len(F)):
-        #     for j in unique_items:
-        #         new_F = list(F[i])
-        #         if j not in new_F:
-        #             new_F.append(j)
-        #             flag = False
-        #
-        #             for m in M:
-        #                 if set(new_F).issuperset(m):
-        #                     flag = True
-        #                     break
-        #             if not flag:
-        #                 C.append(new_F)
-
-        # C = list()
-        # F_items = set()
-        # for i in F:
-        #     for j in i:
-        #         F_items.add(j)
-        #
-        # # Length of Fi+1 beta
-        # n = len(F[0]) + 1
-        # print(n)
-        #
-        # size_n_subsets = utils.find_subarrays_of_size_n(list(F_items), n)
-        # for subset in size_n_subsets:
-        #     flag = False
-        #     for m in M:
-        #         if set(subset).issuperset(m):
-        #             flag = True
-        #             continue
-        #     if not flag:
-        #         C.append(list(subset))
-
         C = list()
         for i in range(len(F)):
             for j in range(i + 1, len(F)):
@@ -365,6 +325,11 @@ class HKPCoherence:
         return count
 
     def calculate_distortion(self) -> float:
+        """
+        Calculate the deviation of data from its true form after finishing the anonymization process
+
+        :return:
+        """
         # S/N
         # S sum info loss of suppressed items
         # N occurrence of all items
@@ -389,7 +354,7 @@ class HKPCoherence:
                     if item not in items_mm_count:
                         items_mm_count[item] = self.MM_e(item, min_moles)
 
-        # sort moles in descending order of cumulative MM
+        # sort moles in descending order of total MM
         for mole_level, i in enumerate(min_moles):
             mole_dict = dict()
             for index, mole in enumerate(i):
@@ -402,6 +367,7 @@ class HKPCoherence:
             ordered_moles[mole_level] = dict(
                 sorted(mole_dict.items(), key=lambda itm: itm[1]["mm_count"], reverse=True))
 
+        # store MM value for each public item e
         self.MM = items_mm_count
 
         with open("Pickles/hkp_MM.pkl", "wb") as f:
@@ -422,7 +388,7 @@ class HKPCoherence:
     def calculate_mole_num(self, node: Node) -> int:
         """
         Calculates the mole_num attribute of a given mole tree node
-delete
+
         :param node: A node of the mole tree
         :return:
         """
@@ -430,6 +396,12 @@ delete
 
     # @staticmethod
     def delete_node_link(self, link_node, score_table: dict):
+        """
+
+        :param link_node: The node that will be removed from its node_link
+        :param score_table:
+        :return:
+        """
 
         # store head node of node-link
         temp = self.get_head_of_link(link_node.label, score_table)
@@ -454,56 +426,34 @@ delete
         # this way we will unlink the link_node from the node_link
         prev_node.node_link = temp.node_link
 
-    @staticmethod
-    def get_last_node_link(label, score_table: dict) -> Node:
+    def get_last_node_link(self, label, score_table: dict) -> Node:
         """
-        Finds the last node of the nodelink given a public item
+        Finds the last node of the node-link given a public item
 
-        :param label:
+        :param label: The label of the node we need the node-link of
         :param score_table:
-        :return:
+        :return: The last node of the node-link
         """
 
-        head_node = score_table[label]["head_of_link"]
+        # get the head node of the node-link
+        head_node = self.get_head_of_link(label, score_table)
 
         current_node = head_node
         next_node = current_node.node_link
 
+        # traverse node-link to find the last item
         while next_node is not None:
             current_node = next_node
             next_node = current_node.node_link
 
         return current_node
 
-    # TODO: delete this func, it won't be used, most likely
-    @staticmethod
-    def find_root_connected_link_node(label, score_table: dict):
-        """
-
-        :param label:
-        :param score_table:
-        :return:
-        """
-        head_node = score_table[label]["head_of_link"]
-
-        current_node = head_node
-        next_node = current_node.node_link
-
-        while next_node is not None and next_node.parent.label != "root":
-            current_node = next_node
-            next_node = current_node.node_link
-
-        if current_node.parent.is_root:
-            return current_node
-        else:
-            return None
-
     @staticmethod
     def get_head_of_link(label, score_table: dict) -> Node:
         """
-        Finds the head node of an item from the scoretable
+        Gets the head node of an item from the scoretable
 
-        :param label:
+        :param label: The label of the node we need the head node of
         :param score_table:
         :return:
         """
@@ -511,22 +461,27 @@ delete
 
     def build_mole_tree(self):
         """
+        Builds mole tree from the list of minimal moles identified
 
         :return:
         """
+
+        # initiate score table
         score_table = dict()
+
+        # define root node
         root = Node(label='root')
-        # MM(e) rankings of the items that are parts of the moles
+
+        # minimal moles arranged in the descending order of their MM values
         M_star = self.MM_desc_order(self.moles)
 
         with open("Pickles/hkp_minimal_moles.pkl", "wb") as f:
             pickle.dump(M_star, f)
 
-        # print(M_sta)
+        # mole_level is the mole plane that divides the moles depending on their length; len 2 moles, len 3 moles ...
         for mole_level in M_star.values():
-            # print(f"mole level : {mole_level}")
+            # moles in the mole level
             for mole in mole_level.values():
-                # print(f"------\nmole: {mole['mole']}\nrest: {mole['mole'][1:]}")
                 # make first item of the mole a parent for the rest of the items
                 nodes = list()
                 for index, item in enumerate(mole["mole"]):
@@ -550,7 +505,6 @@ delete
                             score_table[item]["head_of_link"] = node
                             nodes.append(node)
                         else:
-                            # print(f"item:{item}, nodes[index - 1]: {nodes[index - 1].label}")
                             # every item that comes after the first one should be the child of the following item
                             node = Node(label=item,
                                         mole_num=0,
@@ -613,28 +567,18 @@ delete
         root.mole_num = None
 
         # sort items in scoretable in decreasing order or MM/IL
-        # print(score_table)
         score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
-        # print(score_table)
         self.mole_tree_root = root
-        # self.original_mole_tree = root.copy()
         self.score_table = score_table
-
-        # FIXME: While pickling max recursion error is raised
-        # with open("Pickles/hkp_mole_tree_root.pkl", "wb") as f:
-        #     pickle.dump(self.mole_tree_root, f)
-
-        # with open("Pickles/hkp_score_table.pkl", "wb") as f:
-        #     pickle.dump(self.score_table, f)
-
-        # print(RenderTree(root))
-        # self.print_tree(root)
-        # print(f"Score Table: {score_table}")
-
-        # find rankings for the moles in the minimal moles list
 
     @staticmethod
     def print_tree(start_node: Node):
+        """
+        Print tree sprout from given node
+
+        :param start_node:
+        :return:
+        """
         print(f"\nTree Starting from Node: {start_node.label}")
         for pre, _, node in RenderTree(start_node):
             treestr = u"%s%s" % (pre, node.label)
@@ -642,6 +586,12 @@ delete
 
     @staticmethod
     def node_link_length(head_link):
+        """
+        Finds the length of a node_link
+
+        :param head_link: Head node of the node_link
+        :return:
+        """
         temp = head_link  # Initialise temp
         count = 0  # Initialise count
 
@@ -656,6 +606,13 @@ delete
             return count
 
     def delete_subtree(self, node: Node, score_table: dict):
+        """
+        Function to delete subtree
+
+        :param node:
+        :param score_table:
+        :return:
+        """
         assert node.label in score_table.keys(), f"node: {node.label} was not in the score-table"
 
         print(f"\n---- Delete Subtree ----\n"
@@ -680,41 +637,18 @@ delete
                 self.delete_node_link(link_node=w,
                                       score_table=score_table)
 
-
+            # if MM == 0, then remove the item from the score-table
             if score_table[w.label]["MM"] == 0:
-                # if MM == 0, then remove the item from the score-table
                 print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
                       f"thus it will be removed from the score-table")
                 del score_table[w.label]
-
-            # if w != node:
-            #     print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
-            #
-            #     # decrement w.MM by w.mole_num
-            #     score_table[w.label]["MM"] -= w.mole_num
-            #     assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
-            #                                             f"MM: {score_table[w.label]['MM']}"
-            #     if score_table[w.label]["MM"] == 0:
-            #         # if MM == 0, then remove the item from the score-table
-            #         print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
-            #               f"thus it will be removed from the score-table")
-            #         del score_table[w.label]
-            #
-            # elif w == node and w.is_leaf:
-            #     score_table[w.label]["MM"] -= w.mole_num
-            #     assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
-            #                                             f"MM: {score_table[w.label]['MM']}"
-            #     if score_table[w.label]["MM"] == 0:
-            #         # if MM == 0, then remove the item from the score-table
-            #         print(f"label: {w.label}, MM has become 0, thus it will be removed from the score-table")
-            #         del score_table[w.label]
 
         print("----# Ancestors of node iter #----")
         # find all the ancestors of the node
         ancestors = [ancestor for ancestor in node.ancestors]
         print(f"node.ancestors: {[node.label for node in ancestors]}")
         for w in ancestors:
-            # check if ancestor is the root node, if it is, then dont change root.mole_num
+            # Do not count the root node as an ancestor
             if not w.is_root:
                 print(f"label: {w.label}, mole_num: {w.mole_num}")
                 # decrement w.mole_num and w.MM by node.mole_num
@@ -725,6 +659,7 @@ delete
                            "MM"] >= 0 and w.mole_num >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
                                                            f"MM: {score_table[w.label]['MM']}"
 
+                # if mole_num hits 0, then cut node w from the tree
                 if w.mole_num == 0:
                     print(f"label: {w.label}, mole_num has become 0, thus it will be removed from the tree")
                     w.parent = None
@@ -733,19 +668,21 @@ delete
                     # because it is useless
                     self.delete_node_link(link_node=w,
                                           score_table=score_table)
-
-
+                # if MM of w hits 0 in score-table, remove w from the score-table
                 if score_table[w.label]["MM"] == 0:
                     print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
                           f"thus it will be removed from the score-table")
                     del score_table[w.label]
-            # else:
 
         # lastly remove the node from tree
         node.parent = None
         print("----------------------------")
 
     def execute_algorithm(self):
+        """
+        Run complete anonymization algorithm
+        :return:
+        """
         time_dict = dict()
         # suppress minimal moles
         self.suppress_size1_moles()
@@ -762,6 +699,7 @@ delete
         time_passed = int(start_time - time.time())
         time_dict["build_mole_tree"] = time_passed
 
+        # initiate suppressed items set
         suppressed_items = set()
 
         score_table = self.score_table
@@ -780,9 +718,8 @@ delete
                 print(
                     f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
 
-        # self.print_tree(root)
+        # process all items
         while score_table:
-            # Get the next item in the score_table. Since we
             key, value = next(iter(score_table.items()))
 
             print(f"Score-table length is {len(score_table)} before suppression of item {key}")
@@ -803,11 +740,7 @@ delete
                 print(f"label: {temp.label}, mole_num: {temp.mole_num}, node_link: {temp.node_link}")
                 temp = temp.node_link
 
-
-            # break
-            # print(f"head link label: {head_link.label}, node: {head_link}")
-            # we need to delete all the subtrees starting from headlink, and following the nodelink
-
+            # delete all the subtrees starting from headlink, and following the nodelink
             current_node = head_link
             while current_node is not None:
                 self.delete_subtree(current_node, score_table)
@@ -818,11 +751,8 @@ delete
             print(f"Items in Score-table: {score_table.keys()}\n"
                   f"Score-table length: {len(score_table.keys())}")
 
-            # break
-
-            # assert not search.findall(root, filter_=lambda node: node.label == head_link.label)
-
-            # finally delete the public item e from the score table, so we can move to the next one
+        # after processing all items in the score-table, remove the items tagged as suppressed items from
+        # the transactions in order to anonymize
         if not score_table:
             print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}")
@@ -832,9 +762,6 @@ delete
                 for item in row:
                     if item in self.suppressed_items:
                         self.suppressed_item_occurrence_count += 1
-            self.print_tree(root)
-            for node in search.PreOrderIter(root):
-                print(f"Label: {node.label}, mole_num: {node.mole_num}")
 
             # Suppress all items in suppressed_items from the database D
             for e in suppressed_items:
@@ -858,5 +785,13 @@ delete
                     # merge public and private lists to get full transaction
                     # merge = t.public + t.private
                     merge = ' '.join(map(str, t.private))
+                    f.write(f"{merge}\n")
+                print('Done')
+
+            with open(r'Dataset/Anonymized/anonymized.txt', 'w') as f:
+                for t in self.transactions:
+                    # merge public and private lists to get full transaction
+                    merge = t.public + t.private
+                    merge = ' '.join(map(str, merge))
                     f.write(f"{merge}\n")
                 print('Done')
