@@ -292,6 +292,7 @@ class HKPCoherence:
         # this is basically a list of betas
         # for Fi and Fi+1
         C = list()
+        diff_len = 2
         for i in range(len(F)):
             for j in range(i + 1, len(F)):
                 if self.diff_list(F[i], F[j]) == 2:
@@ -305,7 +306,9 @@ class HKPCoherence:
                     if not flag:
                         C.append(new_F)
 
-        return C
+        # remove duplicates
+        c_sorted = sorted([sorted(mole) for mole in C])
+        return [c_sorted[i] for i in range(len(c_sorted)) if i == 0 or c_sorted[i] != c_sorted[i - 1]]
 
     def MM_e(self, e: int, min_moles: list) -> int:
         """
@@ -341,7 +344,7 @@ class HKPCoherence:
 
         :return:
         """
-
+        # TODO: remove duplicate moles in this function
         # items = set()
         items_mm_count = dict()
         ordered_moles = dict()
@@ -408,23 +411,34 @@ class HKPCoherence:
 
         # if head node itself is the node to be deleted
         # change the head node in score table
+        # TODO: if the head_link is the only node left, head_link.node_link might be None, what to do if that is the case
         if temp is not None:
             if temp == link_node:
-                score_table[temp.label]["head_of_link"] = temp.node_link
+                # head_link.node_link points to the next in line node after the heads
+                score_table[link_node.label]["head_of_link"] = temp.node_link
                 return
 
         # search the link node to be deleted, keep track of the previous node
         # because we need to change the node_link of the node that comes #
         # previous to the node we are looking for
+        # TODO: temp.node_link might be None, take take of it if that is the case
         prev_node = None
         while temp is not link_node:
+            # if temp == link_node:
+            #     break
             prev_node = temp
             temp = temp.node_link
+
+        # if link node was not present in the node link list
+        # if temp is None:
+        #     return
 
         # connect node link of prev node to the node comes after the link_node
         # we are looking for
         # this way we will unlink the link_node from the node_link
         prev_node.node_link = temp.node_link
+
+        temp = None
 
     def get_last_node_link(self, label, score_table: dict) -> Node:
         """
@@ -624,19 +638,20 @@ class HKPCoherence:
         print("----# Subtree iter #----")
         for w in PreOrderIter(node):
 
-            # print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
             print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
 
-            # decrement w.MM by w.mole_num
+            # decrease w.MM by w.mole_num
             score_table[w.label]["MM"] -= w.mole_num
             assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
                                                     f"MM: {score_table[w.label]['MM']}"
 
+            # FIXME: the root of the errors might be heres
             # remove the processed nodes from their respective node_links
-            if w is not node:
-                self.delete_node_link(link_node=w,
-                                      score_table=score_table)
-
+            # if w is not node:
+            #     self.delete_node_link(link_node=w,
+            #                           score_table=score_table)
+            self.delete_node_link(link_node=w,
+                                  score_table=score_table)
             # if MM == 0, then remove the item from the score-table
             if score_table[w.label]["MM"] == 0:
                 print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
@@ -720,6 +735,8 @@ class HKPCoherence:
 
         # process all items
         while score_table:
+
+            # score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
             key, value = next(iter(score_table.items()))
 
             print(f"Score-table length is {len(score_table)} before suppression of item {key}")
@@ -732,8 +749,10 @@ class HKPCoherence:
             # To delete a node from the tree we can set its parent to NONE, so the node and
             # all of its following branches will be disconnected from the rest of the tree
 
+            # FIXME: Headlink was None, in one occasion, find out what is wrong
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
+
             print(f"--------###### Node link details for item: {head_link.label} ######--------")
             temp = head_link
             while temp is not None:
@@ -747,7 +766,6 @@ class HKPCoherence:
                 current_node = current_node.node_link
 
             self.print_tree(root)
-            score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
             print(f"Items in Score-table: {score_table.keys()}\n"
                   f"Score-table length: {len(score_table.keys())}")
 

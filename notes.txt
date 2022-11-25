@@ -51,3 +51,56 @@ node.ancestors: ['root']
 ----------------------------
 
 562 should be deleted from ST, but there is a problem in ancestor iter about the nodes direct child of the root
+
+
+
+##############----- OCCASIONAL PROBLEMS -----################
+---- Delete Subtree ----
+node: 419, mole_num: 6, node_link_len: 1, MM: 10, head_link: TRUE
+----# Subtree iter #----
+label: 419, mole_num: 6, MM: 10
+label: 401, mole_num: 1, MM: 5
+Traceback (most recent call last):
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/main.py", line 53, in <module>
+    hkp.execute_algorithm()
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 746, in execute_algorithm
+    self.delete_subtree(current_node, score_table)
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 637, in delete_subtree
+    self.delete_node_link(link_node=w,
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 422, in delete_node_link
+    temp = temp.node_link
+AttributeError: 'NoneType' object has no attribute 'node_link'
+
+------------------------------------------------------
+
+--------###### Node link details for item: 720 ######--------
+label: 720, mole_num: 5, node_link: None
+
+---- Delete Subtree ----
+node: 720, mole_num: 5, node_link_len: 1, MM: 4, head_link: TRUE
+----# Subtree iter #----
+label: 720, mole_num: 5, MM: 4
+Traceback (most recent call last):
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/main.py", line 53, in <module>
+    hkp.execute_algorithm()
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 756, in execute_algorithm
+    self.delete_subtree(current_node, score_table)
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 642, in delete_subtree
+    assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
+AssertionError: label: 720, mole_num: 5, MM: -1
+
+720 MOLENUM 5 BUT MM:4, THEREFORE IT LEADS TO -1 MM IN SCORETABLE
+
+
+-----------------------------------------------------------------------------
+
+Items in Score-table: dict_keys([368, 419, 12, 354, 217, 177, 918, 438, 151, 862, 413, 720, 316, 541])
+Score-table length: 14
+Score-table length is 14 before suppression of item 368
+SUPPRESSED ITEMS LIST: {640, 641, 1, 265, 138, 778, 266, 653, 142, 272, 403, 405, 280, 27, 541, 158, 31, 163, 803, 805, 419, 168, 940, 177, 946, 948, 820, 949, 568, 185, 826, 316, 193, 197, 326, 967, 712, 968, 332, 844, 846, 720, 338, 210, 598, 857, 345, 217, 988, 351, 740, 357, 612, 229, 744, 745, 746, 492, 368, 371, 885, 118, 631, 888, 634, 763, 254, 127}
+Traceback (most recent call last):
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/main.py", line 53, in <module>
+    hkp.execute_algorithm()
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 747, in execute_algorithm
+    print(f"--------###### Node link details for item: {head_link.label} ######--------")
+AttributeError: 'NoneType' object has no attribute 'label'
