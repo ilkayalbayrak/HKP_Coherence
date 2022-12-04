@@ -172,7 +172,7 @@ class HKPCoherence:
         del F1, M1, C1
         # FIXME: this may need to start from 1 instead of 0
         i = 0
-        while i < self.p and len(F[i]) > 0:
+        while i < self.p - 1 and len(F[i]) > 0:
             print(f"\nStarted i:{i} and len(F[i]):{len(F[i])}")
             time_a = time.time()
             # generate Canditate set for Mi+1 and Fi+1
@@ -217,8 +217,8 @@ class HKPCoherence:
         del F1, M1, C1
         # FIXME: this may need to start from 1 instead of 0
         i = 0
-        while i < self.p and len(F[i]) > 0:
-            print(f"\nStarted i:{i}, len(F[{i}]):{len(F[i])}, len(M[{i}]):{len(M[i])}")
+        while i < self.p - 1 and len(F[i]) > 0:
+            print(f"\nStarted i:{i} size-{i+1}, len(F[{i}]):{len(F[i])}, len(M[{i}]):{len(M[i])}")
             time_a = time.time()
             # generate Canditate set for Mi+1 and Fi+1
             F_, M_ = self.generate_M_F(F[i], M[i])

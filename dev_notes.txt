@@ -5,3 +5,6 @@
 
 # prepare runtime plots for p, k and sigma
 # prepare distortion plots for p,k and sigma
+
+# distortion should be average of 5 random selections for sigma|U| public items
+# Finding moles while using a low k value like k==5 takes too much time
