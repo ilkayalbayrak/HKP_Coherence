@@ -75,11 +75,10 @@ class HKPCoherence:
         self.mole_tree_root = None
         # self.original_mole_tree = None
         self.suppressed_items = None
-        self.finished_public_items = None
+        self.processed_public_items = None  # public items after suppression
         self.total_occurrence_count = 0  # sum of all item occurrences in dataset
         self.suppressed_item_occurrence_count = 0  # supp item occurrence count
         for index, row in enumerate(self.dataset):
-            # TODO:
             public = [i for i in row if i not in private_item_list]
             private = [i for i in row if i in private_item_list]
             self.transactions.append(Transaction(index, public, private))
@@ -158,7 +157,7 @@ class HKPCoherence:
     def anonymization_verifier(self):
 
         # FIXME: C1 needs to be the public item list after the suppression but it has all public items
-        C1 = self.finished_public_items
+        C1 = self.processed_public_items
         M1 = list()
         F1 = list()
 
@@ -784,7 +783,7 @@ class HKPCoherence:
             print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}")
             self.suppressed_items = suppressed_items
-            self.finished_public_items = [i for i in self.public_item_list if i not in suppressed_items]
+            self.processed_public_items = [i for i in self.public_item_list if i not in suppressed_items and i not in self.size1_moles]
             for row in self.dataset:
                 for item in row:
                     if item in self.suppressed_items:
