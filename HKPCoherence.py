@@ -157,6 +157,7 @@ class HKPCoherence:
 
     def anonymization_verifier(self):
 
+        # FIXME: C1 needs to be the public item list after the suppression but it has all public items
         C1 = self.finished_public_items
         M1 = list()
         F1 = list()
@@ -173,14 +174,25 @@ class HKPCoherence:
         # FIXME: this may need to start from 1 instead of 0
         i = 0
         while i < self.p - 1 and len(F[i]) > 0:
-            print(f"\nStarted i:{i} and len(F[i]):{len(F[i])}")
-            time_a = time.time()
-            # generate Canditate set for Mi+1 and Fi+1
-            F_, M_ = self.generate_M_F(F[i], M[i])
-            F.append(F_)
-            M.append(M_)
+
+            print(f"Generate M-F, F: {len(F[i])}, M: {len(M[i])}")
+            time_ = time.time()
+            # Generate Ci+1 for Mi+1 and Fi+1 from Fi
+            M_plus = list()
+            F_plus = list()
+            C_plus = self.generate_C(F[i], M[i])
+
+            # classify new candidates if they are mole or not
+            for beta in C_plus:
+                if self.is_mole(beta):
+                    M_plus.append(beta)
+                else:
+                    F_plus.append(beta)
+
+            F.append(F_plus)
+            M.append(M_plus)
             i += 1
-            print(f"M-F calculation time for i:{i} is {time.time() - time_a} seconds")
+            print(f"M-F calculation time for size:{i+1} is {time.time() - time_} seconds")
 
         anonymized = True
         for possible_mole in M:
@@ -193,65 +205,9 @@ class HKPCoherence:
         # pass
 
     # MM(e) is the number of minimal moles containing the item e
-    def find_minimal_moles(self):
 
-        start_time = time.time()
-        print("Started identification process for Minimal moles and Extendible non-moles")
-        # C1 initial candidates
-        # M1 init minimal moles
-        # F1 init extendible non-moles
 
-        C1 = [i for i in self.public_item_list if i not in self.size1_moles]
-        # C1 = [1,2,3,4,5,6,7,8,9,10]
-        M1 = list()
-        F1 = list()
 
-        for e in C1:
-            if self.is_mole([e]):
-                M1.append([e])
-            else:
-                F1.append([e])
-
-        F = [F1]
-        M = [M1]
-        del F1, M1, C1
-        # FIXME: this may need to start from 1 instead of 0
-        i = 0
-        while i < self.p - 1 and len(F[i]) > 0:
-            print(f"\nStarted i:{i} size-{i+1}, len(F[{i}]):{len(F[i])}, len(M[{i}]):{len(M[i])}")
-            time_a = time.time()
-            # generate Canditate set for Mi+1 and Fi+1
-            F_, M_ = self.generate_M_F(F[i], M[i])
-            F.append(F_)
-            M.append(M_)
-            i += 1
-            print(f"M-F calculation time for i:{i} is {time.time() - time_a} seconds")
-
-        print(f"Finished find minimal moles in {time.time() - start_time} seconds")
-
-        # no need to return F
-        print(f"FINAL M:{M}\n")
-        counter = 0
-        for i in M:
-            print(f"len(M[{counter}]):{len(i)}")
-            counter += 1
-
-        self.moles = M
-        # return M
-
-    def generate_M_F(self, F, M):
-        """Return (Fi+1, Mi+1)
-        """
-        print(f"Generate M-F, F: {len(F)}, M: {len(M)}")
-        M1 = list()
-        F1 = list()
-        C1 = self.generate_C(F, M)
-        for beta in C1:
-            if self.is_mole(beta):
-                M1.append(beta)
-            else:
-                F1.append(beta)
-        return F1, M1
 
     @staticmethod
     def all_paths(start_node: Node) -> list:
@@ -281,34 +237,86 @@ class HKPCoherence:
     def diff_list(L1, L2):
         return len(set(L1).symmetric_difference(set(L2)))
 
-    # @staticmethod
-    def generate_C(self, F: list, M: list) -> list:
-        """
 
-        :param F: List of extendible moles
-        :param M: List of minimal moles
-        :return: Candidate list Ci+1
-        """
-        # this is basically a list of betas
-        # for Fi and Fi+1
-        C = list()
-        diff_len = 2
-        for i in range(len(F)):
-            for j in range(i + 1, len(F)):
-                if self.diff_list(F[i], F[j]) == 2:
-                    new_F = list(F[i])
-                    new_F.extend(x for x in F[j] if x not in new_F)
+
+    def find_minimal_moles(self):
+        print("\nStarted identification process for Minimal moles and Extendible non-moles")
+        start_time = time.time()
+        # public items which are not size-1 moles
+        C1 = [i for i in self.public_item_list if i not in self.size1_moles]
+
+        # initiate min mole list
+        M1 = list()
+
+        # init extendible mole list
+        F1 = list()
+
+        # find M1 and F1
+        for e in C1:
+            if self.is_mole([e]):
+                M1.append([e])
+            else:
+                F1.append([e])
+
+        # Put size-1 M1 and F1 into their containers
+        F = [F1]
+        M = [M1]
+        del F1, M1, C1
+        i = 0
+        while i < self.p - 1 and len(F[i]) > 0:
+
+            print(f"Generate M-F, F: {len(F[i])}, M: {len(M[i])}")
+            time_ = time.time()
+            # Generate Ci+1 for Mi+1 and Fi+1 from Fi
+            M_plus = list()
+            F_plus = list()
+            C_plus = self.generate_C(F[i], M[i])
+
+            # classify new candidates if they are mole or not
+            for beta in C_plus:
+                if self.is_mole(beta):
+                    M_plus.append(beta)
+                else:
+                    F_plus.append(beta)
+
+            F.append(F_plus)
+            M.append(M_plus)
+            i += 1
+            print(f"M-F calculation time for size:{i+1} is {time.time() - time_} seconds")
+        print(f"Runtime for finding minimal moles: {time.time() - start_time}")
+
+        # no need to return F
+        print(f"FINAL M:{M}\n")
+        counter = 0
+        for i in M:
+            print(f"len(M[{counter}]):{len(i)}")
+            counter += 1
+
+        self.moles = M
+
+    def generate_C(self, F: list, M: list):
+
+        C_plus = list()
+        # list of public items in Fi
+        unique_items = list(set(itertools.chain(*F)))
+
+        for beta in F:
+            for i in unique_items:
+                if i not in beta:
+                    beta_plus = list(beta)
+                    beta_plus.append(i)
                     flag = False
                     for m in M:
-                        if set(new_F).issuperset(m):
+                        if set(beta_plus).issuperset(m):
                             flag = True
                             break
                     if not flag:
-                        C.append(new_F)
+                        C_plus.append(beta_plus)
 
         # remove duplicates
-        c_sorted = sorted([sorted(mole) for mole in C])
+        c_sorted = sorted([sorted(mole) for mole in C_plus])
         return [c_sorted[i] for i in range(len(c_sorted)) if i == 0 or c_sorted[i] != c_sorted[i - 1]]
+
 
     def MM_e(self, e: int, min_moles: list) -> int:
         """
@@ -736,7 +744,8 @@ class HKPCoherence:
         # process all items
         while score_table:
 
-            # score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
+            # sort score table so item with max MM/IL is the next in line
+            score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
             key, value = next(iter(score_table.items()))
 
             print(f"Score-table length is {len(score_table)} before suppression of item {key}")

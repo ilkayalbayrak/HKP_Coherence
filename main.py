@@ -121,7 +121,7 @@ if __name__ == "__main__":
     # STANDARD PARAMETERS
     H = 0.4
     K = 30
-    P = 4
+    P = 3
     SIGMA = 0.15  # percentage of public items selected from the dataset
 
     # set a random seed
@@ -150,22 +150,22 @@ if __name__ == "__main__":
         for line in file:
             dataset.append([int(i) for i in set(line.rstrip().split())])
 
-    distortion_p(dataset, public_items, private_items, h=H, k=K, p_list=p_list)
-    distortion_sigma(dataset, all_items=unique_items, sigma_list=sigma_list, h=H, k=K, p=P)
-    distortion_k(dataset, public_items, private_items, h=H, k_list=k_list, p=P)
+    # distortion_p(dataset, public_items, private_items, h=H, k=K, p_list=p_list)
+    # distortion_sigma(dataset, all_items=unique_items, sigma_list=sigma_list, h=H, k=K, p=P)
+    # distortion_k(dataset, public_items, private_items, h=H, k_list=k_list, p=P)
 
     # create the hkp object
-    # hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h=H, k=K, p=P)
-    #
-    # # TODO: calculate and store execution time
-    # start_time = time.time()
-    # # start the anonymization process
-    # hkp.execute_algorithm()
-    #
-    # # runtime
-    # run_time = int(time.time() - start_time)
-    #
-    # distortion = hkp.suppressed_item_occurrence_count / hkp.total_occurrence_count
-    # print(f"Main_Distortion: {distortion}, Runtime: {run_time} ")
+    hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h=H, k=K, p=P)
 
-    # hkp.anonymization_verifier()
+    # TODO: calculate and store execution time
+    start_time = time.time()
+    # start the anonymization process
+    hkp.execute_algorithm()
+
+    # runtime
+    run_time = int(time.time() - start_time)
+
+    distortion = hkp.suppressed_item_occurrence_count / hkp.total_occurrence_count
+    print(f"Main_Distortion: {distortion}, Runtime: {run_time} ")
+
+    hkp.anonymization_verifier()
