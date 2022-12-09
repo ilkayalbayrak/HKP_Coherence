@@ -104,3 +104,17 @@ Traceback (most recent call last):
   File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 747, in execute_algorithm
     print(f"--------###### Node link details for item: {head_link.label} ######--------")
 AttributeError: 'NoneType' object has no attribute 'label'
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+Items in Score-table: dict_keys([567, 58, 366, 296, 27, 981, 280, 871, 952, 239, 738, 628, 784, 17, 54, 618, 351, 118, 319, 405, 921, 155, 967, 769, 51, 529, 475, 471, 111, 839, 947, 844, 545, 611, 307, 689, 785, 279, 794, 575, 563, 536, 800, 893, 21, 71])
+Score-table length: 46
+Score-table length is 46 before suppression of item 58
+SUPPRESSED ITEMS LIST: {2, 3, 6, 16, 19, 532, 21, 536, 537, 539, 541, 544, 545, 546, 33, 563, 51, 567, 58, 59, 575, 71, 79, 592, 611, 107, 108, 622, 111, 625, 627, 652, 152, 156, 671, 163, 176, 689, 181, 190, 193, 709, 201, 202, 717, 212, 213, 214, 215, 753, 765, 769, 771, 784, 785, 277, 279, 794, 800, 803, 297, 299, 304, 307, 317, 830, 323, 839, 840, 329, 330, 844, 332, 336, 852, 856, 863, 864, 361, 879, 371, 892, 893, 901, 402, 916, 407, 930, 933, 421, 935, 435, 947, 951, 441, 447, 964, 471, 475, 994, 496, 501, 504}
+Traceback (most recent call last):
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/main.py", line 163, in <module>
+    hkp.execute_algorithm()
+  File "/home/ilkay/MSC_Computer_Science/DPP/PROJECT/HKP_Coherence/h-k-p_Coherence/HKPCoherence.py", line 765, in execute_algorithm
+    print(f"--------###### Node link details for item: {head_link.label} ######--------")
+AttributeError: 'NoneType' object has no attribute 'label'

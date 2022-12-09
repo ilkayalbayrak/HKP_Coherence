@@ -16,7 +16,6 @@ import utils
         not occur in any (h,k,p)-cohesion of D, thus, can be suppressed in
         a preprocessing step
 
-
 '''
 
 
@@ -101,7 +100,7 @@ class HKPCoherence:
     def p_breach(self, beta, private_item, k) -> float:
         """
         P(β→e)=Sup(β∪{e})/Sup(β)
-        The probability that a transaction contains e, given that it contains β
+        The probability that a transaction contains private item e, given that it contains β
 
         :param beta: Combination of public items no more than "p"
         :param private_item: A single private item
@@ -191,7 +190,7 @@ class HKPCoherence:
             F.append(F_plus)
             M.append(M_plus)
             i += 1
-            print(f"M-F calculation time for size:{i+1} is {time.time() - time_} seconds")
+            print(f"M-F calculation time for size:{i + 1} is {time.time() - time_} seconds")
 
         anonymized = True
         for possible_mole in M:
@@ -200,13 +199,6 @@ class HKPCoherence:
                 anonymized = False
         if anonymized:
             print(f"Anonymization SUCCEED, parameters - h: {self.h}, k: {self.k}, p: {self.p}")
-
-        # pass
-
-    # MM(e) is the number of minimal moles containing the item e
-
-
-
 
     @staticmethod
     def all_paths(start_node: Node) -> list:
@@ -236,8 +228,6 @@ class HKPCoherence:
     def diff_list(L1, L2):
         return len(set(L1).symmetric_difference(set(L2)))
 
-
-
     def find_minimal_moles(self):
         print("\nStarted identification process for Minimal moles and Extendible non-moles")
         start_time = time.time()
@@ -248,14 +238,15 @@ class HKPCoherence:
         M1 = list()
 
         # init extendible mole list
-        F1 = list()
+        F1 = [[i] for i in C1]
 
         # find M1 and F1
-        for e in C1:
-            if self.is_mole([e]):
-                M1.append([e])
-            else:
-                F1.append([e])
+        # for e in C1:
+        #     print(f"for e: {e} in C1")
+        #     if self.is_mole([e]):
+        #         M1.append([e])
+        #     else:
+        #         F1.append([e])
 
         # Put size-1 M1 and F1 into their containers
         F = [F1]
@@ -281,7 +272,7 @@ class HKPCoherence:
             F.append(F_plus)
             M.append(M_plus)
             i += 1
-            print(f"M-F calculation time for size:{i+1} is {time.time() - time_} seconds")
+            print(f"M-F calculation time for size:{i + 1} is {time.time() - time_} seconds")
         print(f"Runtime for finding minimal moles: {time.time() - start_time}")
 
         # no need to return F
@@ -315,7 +306,6 @@ class HKPCoherence:
         # remove duplicates
         c_sorted = sorted([sorted(mole) for mole in C_plus])
         return [c_sorted[i] for i in range(len(c_sorted)) if i == 0 or c_sorted[i] != c_sorted[i - 1]]
-
 
     def MM_e(self, e: int, min_moles: list) -> int:
         """
@@ -732,7 +722,7 @@ class HKPCoherence:
             test_list = search.findall(root, filter_=lambda node: node.label == item)
             for i in test_list:
                 count += i.mole_num
-            # assert count == score_table[item]['MM']
+            assert count == score_table[item]['MM']
             if count != score_table[item]['MM']:
                 print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
                       f"mole num count: {count}")
@@ -783,7 +773,8 @@ class HKPCoherence:
             print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}")
             self.suppressed_items = suppressed_items
-            self.processed_public_items = [i for i in self.public_item_list if i not in suppressed_items and i not in self.size1_moles]
+            self.processed_public_items = [i for i in self.public_item_list if
+                                           i not in suppressed_items and i not in self.size1_moles]
             for row in self.dataset:
                 for item in row:
                     if item in self.suppressed_items:
