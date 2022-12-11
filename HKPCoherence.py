@@ -1,13 +1,10 @@
-from functools import reduce
-
-import numpy as np
 import time
 import itertools
-import pickle
+import os
+import pandas as pd
 
-from anytree import NodeMixin, RenderTree, search, LevelOrderIter, PreOrderIter
+from anytree import NodeMixin, RenderTree, search, PreOrderIter
 
-import utils
 
 '''
     #######- GREEDY ALGORITHM -#######
@@ -49,7 +46,7 @@ class Transaction:
 
 class HKPCoherence:
     # TODO: should I save the suppressed items into a global variable?
-    def __init__(self, dataset: list, public_item_list: list, private_item_list: list, h: float, k: int, p: int):
+    def __init__(self, dataset: list, public_item_list: list, private_item_list: list, h: float, k: int, p: int, sigma: float):
         """
 
         :param dataset: The list of transactions
@@ -58,6 +55,7 @@ class HKPCoherence:
         :param h: The percentage of the transactions in beta-cohort that contain a common private item
         :param k: The least number of transactions that should be contained in the beta-cohort
         :param p: The maximum number of public items that can be obtained as prior knowledge in a single attack
+        :param sigma: the percentage of public items wrt all items in the dataset
         """
         # includes all private and public items
         self.dataset = dataset
@@ -66,6 +64,7 @@ class HKPCoherence:
         self.h = h
         self.k = k
         self.p = p
+        self.sigma = sigma
         self.transactions = list()
         self.size1_moles = list()
         self.moles = None
@@ -78,6 +77,7 @@ class HKPCoherence:
         self.total_occurrence_count = 0  # sum of all item occurrences in dataset
         self.suppressed_item_occurrence_count = 0  # supp item occurrence count
         for index, row in enumerate(self.dataset):
+            print(index)
             public = [i for i in row if i not in private_item_list]
             private = [i for i in row if i in private_item_list]
             self.transactions.append(Transaction(index, public, private))
@@ -155,7 +155,7 @@ class HKPCoherence:
 
     def anonymization_verifier(self):
 
-        # FIXME: C1 needs to be the public item list after the suppression but it has all public items
+        # public items we have left with after the suppression
         C1 = self.processed_public_items
         M1 = list()
         F1 = list()
@@ -169,7 +169,6 @@ class HKPCoherence:
         F = [F1]
         M = [M1]
         del F1, M1, C1
-        # FIXME: this may need to start from 1 instead of 0
         i = 0
         while i < self.p - 1 and len(F[i]) > 0:
 
@@ -212,21 +211,6 @@ class HKPCoherence:
         temp = [leaf.path[skip:] for leaf in search.PreOrderIter(start_node, filter_=lambda node: node.is_leaf)]
         # print(f"label: {start_node.label}, mole_num: {len(temp)}")
         return temp
-
-    @staticmethod
-    def find_subsets_of_size_n(l: list, n: int):
-        """
-        Generates subsets of size-n given a list
-
-        :param l: List of items to make subsets of
-        :param n: Size of a subset
-        :return:
-        """
-        return itertools.combinations(l, n)
-
-    @staticmethod
-    def diff_list(L1, L2):
-        return len(set(L1).symmetric_difference(set(L2)))
 
     def find_minimal_moles(self):
         print("\nStarted identification process for Minimal moles and Extendible non-moles")
@@ -307,7 +291,7 @@ class HKPCoherence:
         c_sorted = sorted([sorted(mole) for mole in C_plus])
         return [c_sorted[i] for i in range(len(c_sorted)) if i == 0 or c_sorted[i] != c_sorted[i - 1]]
 
-    def MM_e(self, e: int, min_moles: list) -> int:
+    def MM_e(self, e, min_moles: list) -> int:
         """
         Returns the number of minimal moles containing the public item e
 
@@ -370,9 +354,7 @@ class HKPCoherence:
         # store MM value for each public item e
         self.MM = items_mm_count
 
-        with open("Pickles/hkp_MM.pkl", "wb") as f:
-            pickle.dump(self.MM, f)
-
+        print(f"\nOrdered moles: {ordered_moles}\n")
         return ordered_moles
 
     def info_loss(self, e):
@@ -485,9 +467,6 @@ class HKPCoherence:
 
         # minimal moles arranged in the descending order of their MM values
         M_star = self.MM_desc_order(self.moles)
-
-        with open("Pickles/hkp_minimal_moles.pkl", "wb") as f:
-            pickle.dump(M_star, f)
 
         # mole_level is the mole plane that divides the moles depending on their length; len 2 moles, len 3 moles ...
         for mole_level in M_star.values():
@@ -695,21 +674,25 @@ class HKPCoherence:
         Run complete anonymization algorithm
         :return:
         """
-        time_dict = dict()
+        performance_records = {"h": self.h,
+                               "k": self.k,
+                               "p": self.p,
+                               "sigma": self.sigma,
+                               "data_size": len(self.dataset),
+                               "distortion": 0,
+                               "time_find_min_moles": 0,
+                               "time_total": 0}
+
         # suppress minimal moles
         self.suppress_size1_moles()
 
         start_time = time.time()
         # find minimal moles M* from D
         self.find_minimal_moles()
-        time_passed = int(start_time - time.time())
-        time_dict["find_min_moles"] = time_passed
+        performance_records["time_find_min_moles"] = int(time.time() - start_time)
 
-        start_time = time.time()
         # Build the mole tree
         self.build_mole_tree()
-        time_passed = int(start_time - time.time())
-        time_dict["build_mole_tree"] = time_passed
 
         # initiate suppressed items set
         suppressed_items = set()
@@ -787,7 +770,19 @@ class HKPCoherence:
                         t.public.remove(e)
 
             distortion = self.calculate_distortion()
-            print(f"DISTORTION: {distortion}")
+            performance_records["time_total"] = int(time.time() - start_time)
+            performance_records["distortion"] = distortion
+
+            # Write performance records to csv file for later use
+            # Open the file in "append" mode
+            output_path = "./Plots/performance_records.csv"
+            df_performance = pd.DataFrame([performance_records])
+            df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
+
+            print(f"\nH: {self.h}, K: {self.k}, P:{self.p}, SIGMA: {self.sigma}\n"
+                  f"DISTORTION: {distortion}, TOTAL TIME: {performance_records['time_total']}, "
+                  f"TIME FIND MIN-MOLES: {performance_records['time_find_min_moles']}\n")
+
             print("Preparing Anonymized txt file")
             with open(r'Dataset/Anonymized/public.txt', 'w') as f:
                 for t in self.transactions:
