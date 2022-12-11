@@ -35,13 +35,13 @@ class Node(NodeMixin):
             self.children = children
 
 
-# this can be an inner class of hkp coherence
-class Transaction:
-    # tag the private and pub items of each transaction in data
-    def __init__(self, ID: int, public: list, private: list):
-        self.ID = ID
-        self.public = public
-        self.private = private
+# # this can be an inner class of hkp coherence
+# class Transaction:
+#     # tag the private and pub items of each transaction in data
+#     def __init__(self, ID: int, public: list, private: list):
+#         self.ID = ID
+#         self.public = public
+#         self.private = private
 
 
 class HKPCoherence:
@@ -80,7 +80,7 @@ class HKPCoherence:
             print(index)
             public = [i for i in row if i not in private_item_list]
             private = [i for i in row if i in private_item_list]
-            self.transactions.append(Transaction(index, public, private))
+            self.transactions.append({"id": index, "public": public, "private": private})
             self.total_occurrence_count += len(row)
 
     def Sup(self, beta) -> int:
@@ -93,7 +93,7 @@ class HKPCoherence:
         k = 0
         # t means transaction, which is any single row of the dataset
         for t in self.transactions:
-            if set(t.public).issuperset(beta):
+            if set(t["public"]).issuperset(beta):
                 k += 1
         return k
 
@@ -144,8 +144,8 @@ class HKPCoherence:
                 # delete item e from all transactions
                 self.size1_moles.append(e)
                 for t in self.transactions:
-                    if e in t.public:
-                        t.public.remove(e)
+                    if e in t["public"]:
+                        t["public"].remove(e)
                     # try:
                     #     t.public.remove(e)
                     # except ValueError:
@@ -766,8 +766,8 @@ class HKPCoherence:
             # Suppress all items in suppressed_items from the database D
             for e in suppressed_items:
                 for t in self.transactions:
-                    if e in t.public:
-                        t.public.remove(e)
+                    if e in t["public"]:
+                        t["public"].remove(e)
 
             distortion = self.calculate_distortion()
             performance_records["time_total"] = int(time.time() - start_time)
@@ -775,7 +775,7 @@ class HKPCoherence:
 
             # Write performance records to csv file for later use
             # Open the file in "append" mode
-            output_path = "./Plots/performance_records.csv"
+            output_path = "./Plots/test_performance_records.csv"
             df_performance = pd.DataFrame([performance_records])
             df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
 
@@ -788,7 +788,7 @@ class HKPCoherence:
                 for t in self.transactions:
                     # merge public and private lists to get full transaction
                     # merge = t.public + t.private
-                    merge = ' '.join(map(str, t.public))
+                    merge = ' '.join(map(str, t["public"]))
                     f.write(f"{merge}\n")
                 print('Done')
 
@@ -796,14 +796,14 @@ class HKPCoherence:
                 for t in self.transactions:
                     # merge public and private lists to get full transaction
                     # merge = t.public + t.private
-                    merge = ' '.join(map(str, t.private))
+                    merge = ' '.join(map(str, t["private"]))
                     f.write(f"{merge}\n")
                 print('Done')
 
             with open(r'Dataset/Anonymized/anonymized.txt', 'w') as f:
                 for t in self.transactions:
                     # merge public and private lists to get full transaction
-                    merge = t.public + t.private
+                    merge = t["public"] + t["private"]
                     merge = ' '.join(map(str, merge))
                     f.write(f"{merge}\n")
                 print('Done')
