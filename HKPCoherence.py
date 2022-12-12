@@ -5,6 +5,7 @@ import pandas as pd
 
 from anytree import NodeMixin, RenderTree, search, PreOrderIter
 
+import utils
 
 '''
     #######- GREEDY ALGORITHM -#######
@@ -700,18 +701,8 @@ class HKPCoherence:
         score_table = self.score_table
         root = self.mole_tree_root
 
-        for index, item in enumerate(score_table.keys()):
-            count = 0
-            test_list = search.findall(root, filter_=lambda node: node.label == item)
-            for i in test_list:
-                count += i.mole_num
-            assert count == score_table[item]['MM']
-            if count != score_table[item]['MM']:
-                print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
-                      f"mole num count: {count}")
-            else:
-                print(
-                    f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
+        # check if MM values in score table equal total mole_num count
+        utils.check_MM_equal_mole_num(root, score_table)
 
         # process all items
         while score_table:
