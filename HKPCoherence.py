@@ -108,9 +108,18 @@ class HKPCoherence:
         :param k: Sup(beta) a.k.a number of transactions in beta-cohort
         :return: Breach probability of beta
         """
-        temp_beta = beta.copy()
-        temp_beta.append(private_item)
-        return self.Sup(temp_beta) / k
+        # temp_beta = beta.copy()
+        # temp_beta.append(private_item)
+
+        # number of transactions that contain beta and the private item at the same time
+        sup_beta_e = 0
+        for t in self.transactions:
+            if set(t["public"]).issuperset(beta) and private_item in t["private"]:
+                sup_beta_e += 1
+
+        if sup_beta_e / k > self.h:
+            print(f"Preach prob: {sup_beta_e/k}, beta: {beta}, private_item e: {private_item}")
+        return sup_beta_e / k
 
     def is_mole(self, beta) -> bool:
         """
@@ -123,7 +132,6 @@ class HKPCoherence:
 
         if k == 0:
             return False
-        # TODO: decide if using < or <= makes more sense
         if k < self.k:
             return True
         for e in self.private_item_list:
@@ -281,6 +289,7 @@ class HKPCoherence:
                     beta_plus = list(beta)
                     beta_plus.append(i)
                     flag = False
+                    # FIXME: candidate generation takes ages on, do something about it
                     for m in M:
                         if set(beta_plus).issuperset(m):
                             flag = True
@@ -766,7 +775,7 @@ class HKPCoherence:
 
             # Write performance records to csv file for later use
             # Open the file in "append" mode
-            output_path = "./Plots/test_performance_records.csv"
+            output_path = "./Plots/performance_records.csv"
             df_performance = pd.DataFrame([performance_records])
             df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
 

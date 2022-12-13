@@ -28,7 +28,8 @@ def check_MM_equal_mole_num(tree_root, score_table):
         test_list = search.findall(tree_root, filter_=lambda node: node.label == item)
         for i in test_list:
             count += i.mole_num
-        assert count == score_table[item]['MM']
+        assert count == score_table[item]['MM'], f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, " \
+                                                 f"mole num count: {count}"
         if count != score_table[item]['MM']:
             print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
                   f"mole num count: {count}")
