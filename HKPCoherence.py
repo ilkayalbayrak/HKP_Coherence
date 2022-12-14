@@ -46,8 +46,8 @@ class Node(NodeMixin):
 
 
 class HKPCoherence:
-    # TODO: should I save the suppressed items into a global variable?
-    def __init__(self, dataset: list, public_item_list: list, private_item_list: list, h: float, k: int, p: int, sigma: float):
+    def __init__(self, dataset: list, public_item_list: list, private_item_list: list, h: float, k: int, p: int,
+                 sigma: float):
         """
 
         :param dataset: The list of transactions
@@ -108,17 +108,17 @@ class HKPCoherence:
         :param k: Sup(beta) a.k.a number of transactions in beta-cohort
         :return: Breach probability of beta
         """
-        # temp_beta = beta.copy()
-        # temp_beta.append(private_item)
 
         # number of transactions that contain beta and the private item at the same time
         sup_beta_e = 0
-        for t in self.transactions:
-            if set(t["public"]).issuperset(beta) and private_item in t["private"]:
+        beta_e = beta.copy()
+        beta_e.append(private_item)
+        for t in self.dataset:
+            if set(beta_e).issubset(t):
                 sup_beta_e += 1
 
         if sup_beta_e / k > self.h:
-            print(f"Preach prob: {sup_beta_e/k}, beta: {beta}, private_item e: {private_item}")
+            print(f"Preach prob: {sup_beta_e / k}, beta: {beta}, private_item e: {private_item}")
         return sup_beta_e / k
 
     def is_mole(self, beta) -> bool:
@@ -127,16 +127,22 @@ class HKPCoherence:
         :param beta: Combination(subset) of public items no more than "p"
         :return:
         """
-
+        # count the support of beta
         k = self.Sup(beta)
 
         if k == 0:
             return False
+
+        # if Sup(beta) < k, then beta is a mole
         if k < self.k:
             return True
+
+        # for any private item e, if the probability of both beta and e being in the
+        # same transaction > h, then beta is a mole
         for e in self.private_item_list:
             if self.p_breach(beta, e, k) > self.h:
                 return True
+
         return False
 
     def suppress_size1_moles(self):
@@ -290,6 +296,7 @@ class HKPCoherence:
                     beta_plus.append(i)
                     flag = False
                     # FIXME: candidate generation takes ages on, do something about it
+                    # 
                     for m in M:
                         if set(beta_plus).issuperset(m):
                             flag = True
@@ -335,8 +342,7 @@ class HKPCoherence:
 
         :return:
         """
-        # TODO: remove duplicate moles in this function
-        # items = set()
+
         items_mm_count = dict()
         ordered_moles = dict()
         # find the public items that are parts of minimal moles
@@ -386,7 +392,6 @@ class HKPCoherence:
         """
         return len(self.all_paths(node))
 
-    # @staticmethod
     def delete_node_link(self, link_node, score_table: dict):
         """
 
@@ -413,14 +418,8 @@ class HKPCoherence:
         # TODO: temp.node_link might be None, take take of it if that is the case
         prev_node = None
         while temp is not link_node:
-            # if temp == link_node:
-            #     break
             prev_node = temp
             temp = temp.node_link
-
-        # if link node was not present in the node link list
-        # if temp is None:
-        #     return
 
         # connect node link of prev node to the node comes after the link_node
         # we are looking for
@@ -754,7 +753,8 @@ class HKPCoherence:
         # the transactions in order to anonymize
         if not score_table:
             print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
-                  f"Suppressed items length: {len(suppressed_items)}")
+                  f"Suppressed items length: {len(suppressed_items)}, Size-1 moles: {len(self.size1_moles)}, "
+                  f"Total Suppressed: {len(suppressed_items) + len(self.size1_moles)}")
             self.suppressed_items = suppressed_items
             self.processed_public_items = [i for i in self.public_item_list if
                                            i not in suppressed_items and i not in self.size1_moles]
