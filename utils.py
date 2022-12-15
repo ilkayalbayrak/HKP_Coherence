@@ -1,4 +1,5 @@
 import itertools
+import pandas as pd
 from anytree import search
 
 
@@ -36,3 +37,14 @@ def check_MM_equal_mole_num(tree_root, score_table):
         else:
             print(
                 f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
+
+
+def convert_txt_to_csv(input_txt, output_csv):
+    dataset = []
+    with open(input_txt, "r") as file:
+        for line in file:
+            dataset.append([int(i) for i in set(line.rstrip().split())])
+
+    data_df = pd.DataFrame(dataset)
+    print(data_df.head())
+    data_df.to_csv(output_csv, index=False, header=False)
