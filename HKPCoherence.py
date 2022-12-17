@@ -105,7 +105,7 @@ class HKPCoherence:
 
         return public_item_set, private_item_set, transaction_list
 
-    def suppress_size1_moles_ALTERNATIVE(self, public_item_set, private_item_set, transaction_list, freq_set):
+    def suppress_size1_moles(self, public_item_set, private_item_set, transaction_list, freq_set):
         """
         Calculate support and p_breach and return a subset of items
         that satisfies the conditions for k and h
@@ -197,7 +197,7 @@ class HKPCoherence:
 
         return _item_set, minimal_moles
 
-    def find_min_moles_ALTERNATIVE(self):
+    def find_minimal_moles(self):
         """
         Apriori algorithm like fast solution to find all the minimal moles in the dataset
         :return:
@@ -213,10 +213,10 @@ class HKPCoherence:
         M = dict()
 
         # public items that non-moles and transaction list cleaned from size-1 moles
-        one_C_set, transaction_list = self.suppress_size1_moles_ALTERNATIVE(public_item_set,
-                                                                            private_item_set,
-                                                                            transaction_list,
-                                                                            freq_set)
+        one_C_set, transaction_list = self.suppress_size1_moles(public_item_set,
+                                                                private_item_set,
+                                                                transaction_list,
+                                                                freq_set)
 
         start_time = time.time()
         current_F_set = one_C_set
@@ -250,137 +250,7 @@ class HKPCoherence:
         self.support_dict = freq_set
         return pass_time
 
-        # return M
-
-    def Sup(self, beta) -> int:
-        """
-        Returns the number of transactions in beta-cohort
-
-        :param beta: Combination(subset) of public items no more than "p"
-        :return: Sup(beta), a.k.a. k
-        """
-        k = 0
-        # t means transaction, which is any single row of the dataset
-        for t in self.transactions:
-            if set(t["public"]).issuperset(beta):
-                k += 1
-        return k
-
-    def p_breach(self, beta, private_item, k) -> float:
-        """
-        P(β→e)=Sup(β∪{e})/Sup(β)
-        The probability that a transaction contains private item e, given that it contains β
-
-        :param beta: Combination of public items no more than "p"
-        :param private_item: A single private item
-        :param k: Sup(beta) a.k.a number of transactions in beta-cohort
-        :return: Breach probability of beta
-        """
-
-        # number of transactions that contain beta and the private item at the same time
-        sup_beta_e = 0
-        beta_e = beta.copy()
-        beta_e.append(private_item)
-        for t in self.dataset:
-            if set(beta_e).issubset(t):
-                sup_beta_e += 1
-
-        if sup_beta_e / k > self.h:
-            print(f"Preach prob: {sup_beta_e / k}, beta: {beta}, private_item e: {private_item}")
-        return sup_beta_e / k
-
-    def is_mole(self, beta) -> bool:
-        """
-
-        :param beta: Combination(subset) of public items no more than "p"
-        :return:
-        """
-        # count the support of beta
-        k = self.Sup(beta)
-
-        if k == 0:
-            return False
-
-        # if Sup(beta) < k, then beta is a mole
-        if k < self.k:
-            return True
-
-        # for any private item e, if the probability of both beta and e being in the
-        # same transaction > h, then beta is a mole
-        for e in self.private_item_list:
-            if self.p_breach(beta, e, k) > self.h:
-                return True
-
-        return False
-
-    def suppress_size1_moles(self):
-        """
-        # suppress all the public items that are size-1 moles
-        :return: list of size1 moles (just in case I have use for them down the line)
-        """
-        # size1_moles = list()
-        start_time = time.time()
-        print("Started suppressing size-1 moles")
-        for e in self.public_item_list:
-
-            if self.is_mole([e]):
-                # delete item e from all transactions
-                self.size1_moles.append(e)
-                for t in self.transactions:
-                    if e in t["public"]:
-                        t["public"].remove(e)
-                    # try:
-                    #     t.public.remove(e)
-                    # except ValueError:
-                    #     continue
-        print(
-            f"Suppressed {len(self.size1_moles)} size-1 mole public items. Time passed: {int(time.time() - start_time)}")
-
-    def anonymization_verifier(self):
-
-        # public items we have left with after the suppression
-        C1 = self.processed_public_items
-        M1 = list()
-        F1 = list()
-
-        for e in C1:
-            if self.is_mole([e]):
-                M1.append([e])
-            else:
-                F1.append([e])
-
-        F = [F1]
-        M = [M1]
-        del F1, M1, C1
-        i = 0
-        while i < self.p - 1 and len(F[i]) > 0:
-
-            print(f"Generate M-F, F: {len(F[i])}, M: {len(M[i])}")
-            time_ = time.time()
-            # Generate Ci+1 for Mi+1 and Fi+1 from Fi
-            M_plus = list()
-            F_plus = list()
-            C_plus = self.generate_C(F[i], M[i])
-
-            # classify new candidates if they are mole or not
-            for beta in C_plus:
-                if self.is_mole(beta):
-                    M_plus.append(beta)
-                else:
-                    F_plus.append(beta)
-
-            F.append(F_plus)
-            M.append(M_plus)
-            i += 1
-            print(f"M-F calculation time for size:{i + 1} is {time.time() - time_} seconds")
-
-        anonymized = True
-        for possible_mole in M:
-            if len(possible_mole) != 0:
-                print(f"Anonymization FAILED, size - {len(possible_mole)} moles: {possible_mole}")
-                anonymized = False
-        if anonymized:
-            print(f"Anonymization SUCCEED, parameters - h: {self.h}, k: {self.k}, p: {self.p}")
+    # TODO: Make a new anonymization verifier
 
     @staticmethod
     def all_paths(start_node: Node) -> list:
@@ -394,90 +264,6 @@ class HKPCoherence:
         temp = [leaf.path[skip:] for leaf in search.PreOrderIter(start_node, filter_=lambda node: node.is_leaf)]
         # print(f"label: {start_node.label}, mole_num: {len(temp)}")
         return temp
-
-
-
-    # TODO: change canditate generation and finding F and M, following the Apriori algorithm
-    def find_minimal_moles(self):
-        print("\nStarted identification process for Minimal moles and Extendible non-moles")
-        start_time = time.time()
-        # public items which are not size-1 moles
-        C1 = [i for i in self.public_item_list if i not in self.size1_moles]
-
-        # initiate min mole list
-        M1 = list()
-
-        # init extendible mole list
-        F1 = [[i] for i in C1]
-
-        # find M1 and F1
-        # for e in C1:
-        #     print(f"for e: {e} in C1")
-        #     if self.is_mole([e]):
-        #         M1.append([e])
-        #     else:
-        #         F1.append([e])
-
-        # Put size-1 M1 and F1 into their containers
-        F = [F1]
-        M = [M1]
-        del F1, M1, C1
-        i = 0
-        while i < self.p - 1 and len(F[i]) > 0:
-
-            print(f"Generate M-F, F: {len(F[i])}, M: {len(M[i])}")
-            time_ = time.time()
-            # Generate Ci+1 for Mi+1 and Fi+1 from Fi
-            M_plus = list()
-            F_plus = list()
-            C_plus = self.generate_C(F[i], M[i])
-
-            # classify new candidates if they are mole or not
-            for beta in C_plus:
-                if self.is_mole(beta):
-                    M_plus.append(beta)
-                else:
-                    F_plus.append(beta)
-
-            F.append(F_plus)
-            M.append(M_plus)
-            i += 1
-            print(f"M-F calculation time for size:{i + 1} is {time.time() - time_} seconds")
-        print(f"Runtime for finding minimal moles: {time.time() - start_time}")
-
-        # no need to return F
-        print(f"FINAL M:{M}\n")
-        counter = 0
-        for i in M:
-            print(f"len(M[{counter}]):{len(i)}")
-            counter += 1
-
-        self.moles = M
-
-    def generate_C(self, F: list, M: list):
-
-        C_plus = list()
-        # list of public items in Fi
-        unique_items = list(set(chain(*F)))
-
-        for beta in F:
-            for i in unique_items:
-                if i not in beta:
-                    beta_plus = list(beta)
-                    beta_plus.append(i)
-                    flag = False
-                    # FIXME: candidate generation takes ages on, do something about it
-                    #
-                    for m in M:
-                        if set(beta_plus).issuperset(m):
-                            flag = True
-                            break
-                    if not flag:
-                        C_plus.append(beta_plus)
-
-        # remove duplicates
-        c_sorted = sorted([sorted(mole) for mole in C_plus])
-        return [c_sorted[i] for i in range(len(c_sorted)) if i == 0 or c_sorted[i] != c_sorted[i - 1]]
 
     def MM_e(self, e, min_moles: list) -> int:
         """
@@ -752,7 +538,7 @@ class HKPCoherence:
         """
         print(f"\nTree Starting from Node: {start_node.label}")
         for pre, _, node in RenderTree(start_node):
-            treestr = u"%s%s:%s" % (pre, node.label,node.mole_num)
+            treestr = u"%s%s:%s" % (pre, node.label, node.mole_num)
             print(treestr.ljust(8))
 
     @staticmethod
@@ -864,10 +650,8 @@ class HKPCoherence:
                                "time_find_min_moles": 0,
                                "time_total": 0}
 
-
-
         # find minimal moles M* from D
-        pass_time = self.find_min_moles_ALTERNATIVE()
+        pass_time = self.find_minimal_moles()
         performance_records["time_find_min_moles"] = int(pass_time)
 
         start_time = time.time()
