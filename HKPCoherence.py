@@ -68,6 +68,7 @@ class HKPCoherence:
         self.sigma = sigma
         self.transactions = list()
         self.size1_moles = list()
+        self.support_dict = None
         self.moles = None
         self.MM = dict()
         self.score_table = None
@@ -78,10 +79,10 @@ class HKPCoherence:
         self.total_occurrence_count = 0  # sum of all item occurrences in dataset
         self.suppressed_item_occurrence_count = 0  # supp item occurrence count
         for index, row in enumerate(self.dataset):
-            print(index)
-            public = [i for i in row if i not in private_item_list]
-            private = [i for i in row if i in private_item_list]
-            self.transactions.append({"id": index, "public": public, "private": private})
+            # print(index)
+            # public = [i for i in row if i not in private_item_list]
+            # private = [i for i in row if i in private_item_list]
+            # self.transactions.append({"id": index, "public": public, "private": private})
             self.total_occurrence_count += len(row)
 
     def get_itemset_transaction_list(self, data_iterator, public_item_list, private_item_list):
@@ -123,7 +124,8 @@ class HKPCoherence:
         _item_set, size1_moles = self.get_moles_and_candidates(public_item_set,
                                                                private_item_set,
                                                                transaction_list,
-                                                               freq_set)
+                                                               freq_set,
+                                                               )
 
         self.size1_moles = size1_moles
         print(f"Non-mole size-1 items len: {len(_item_set)}, items:{_item_set}")
@@ -139,6 +141,7 @@ class HKPCoherence:
             clean_transaction_list.append(frozenset(temp_transaction))
 
         print(f"len clean transaction list: {len(clean_transaction_list)}")
+
         return _item_set, clean_transaction_list
 
     @staticmethod
@@ -148,8 +151,10 @@ class HKPCoherence:
             [i.union(j) for i in item_set for j in item_set if len(i.union(j)) == length]
         )
 
-    def get_moles_and_candidates(self, item_set, private_item_set, transaction_list, freq_set):
+    def get_moles_and_candidates(self, item_set, private_item_set, transaction_list, freq_set, mole_list=None):
 
+        if mole_list is None:
+            mole_list = set([])
         _item_set = set()
         local_set = defaultdict(int)
         minimal_moles = set()
@@ -177,8 +182,15 @@ class HKPCoherence:
         # if Sup(beta) < k or sup(beta->e)/sup(beta) > h, then mole
         for item, support in local_set.items():
             if support < self.k or max(p_breach_dict[item].values()) / support > self.h:
-                minimal_moles.add(item)
+                flag = False
+                for m in mole_list:
+                    if m.issubset(item):
+                        flag = True
+                        break
+                if not flag:
+                    minimal_moles.add(item)
             else:
+                # FIXME: this check may not be necessary, if if there is a problem with build_mole_tree first
                 _item_set.add(item)
 
         print(f"Non-mole betas len: {len(_item_set)}, betas:{_item_set}")
@@ -205,17 +217,40 @@ class HKPCoherence:
                                                                             private_item_set,
                                                                             transaction_list,
                                                                             freq_set)
+
+        start_time = time.time()
         current_F_set = one_C_set
+        current_M_set = None
         p = 2
+
         while p <= self.p and current_F_set != set([]):
             F[p - 1] = current_F_set
             current_F_set = self.join_set(current_F_set, p)
             current_C_set, current_M_set = self.get_moles_and_candidates(
-                current_F_set, private_item_set, transaction_list, freq_set
+                current_F_set, private_item_set, transaction_list, freq_set, current_M_set
             )
             current_F_set = current_C_set
             M[p] = current_M_set
             p += 1
+
+        minimal_moles = []
+        for p in M.keys():
+            mole_level_container = []
+            for mole in M[p]:
+                mole_level_container.append(list(mole))
+            minimal_moles.append(mole_level_container)
+
+        pass_time = time.time() - start_time
+        self.moles = minimal_moles
+
+        print(f"Min-moles: {minimal_moles}")
+        for mole_level in minimal_moles:
+            print(mole_level)
+
+        self.support_dict = freq_set
+        return pass_time
+
+        # return M
 
     def Sup(self, beta) -> int:
         """
@@ -432,7 +467,7 @@ class HKPCoherence:
                     beta_plus.append(i)
                     flag = False
                     # FIXME: candidate generation takes ages on, do something about it
-                    # 
+                    #
                     for m in M:
                         if set(beta_plus).issuperset(m):
                             flag = True
@@ -517,7 +552,8 @@ class HKPCoherence:
         :return:
         """
         # IL(e) = Sup(e)
-        return self.Sup(e)
+
+        return self.support_dict[frozenset(e)]
 
     def calculate_mole_num(self, node: Node) -> int:
         """
@@ -716,7 +752,7 @@ class HKPCoherence:
         """
         print(f"\nTree Starting from Node: {start_node.label}")
         for pre, _, node in RenderTree(start_node):
-            treestr = u"%s%s" % (pre, node.label)
+            treestr = u"%s%s:%s" % (pre, node.label,node.mole_num)
             print(treestr.ljust(8))
 
     @staticmethod
@@ -828,13 +864,13 @@ class HKPCoherence:
                                "time_find_min_moles": 0,
                                "time_total": 0}
 
-        # suppress minimal moles
-        self.suppress_size1_moles()
+
+
+        # find minimal moles M* from D
+        pass_time = self.find_min_moles_ALTERNATIVE()
+        performance_records["time_find_min_moles"] = int(pass_time)
 
         start_time = time.time()
-        # find minimal moles M* from D
-        self.find_minimal_moles()
-        performance_records["time_find_min_moles"] = int(time.time() - start_time)
 
         # Build the mole tree
         self.build_mole_tree()
@@ -846,7 +882,7 @@ class HKPCoherence:
         root = self.mole_tree_root
 
         # check if MM values in score table equal total mole_num count
-        utils.check_MM_equal_mole_num(root, score_table)
+        # utils.check_MM_equal_mole_num(root, score_table)
 
         # process all items
         while score_table:

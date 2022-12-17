@@ -57,7 +57,7 @@ def distortion_k(dataset, public_items, private_items, h, k_list, p, sigma):
 
 # TODO: Convert main into a function so it is easier to make multiple runs back to back in order to get the plots
 if __name__ == "__main__":
-    DATA_PATH = "./Dataset/T40I10D100K_100.txt"
+    DATA_PATH = "./Dataset/T40I10D100K_5000.txt"
 
     p_list = [2, 3, 4, 5, 6, 7]
     k_list = [5, 10, 20, 30, 40, 50]
@@ -65,7 +65,7 @@ if __name__ == "__main__":
 
     # STANDARD PARAMETERS
     H = 0.4
-    K = 5
+    K = 30
     P = 4
     SIGMA = 0.15  # percentage of public items selected from the dataset
 
@@ -103,6 +103,6 @@ if __name__ == "__main__":
     hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h=H, k=K, p=P, sigma=SIGMA)
 
     # start the anonymization process
-    # hkp.execute_algorithm()
-    hkp.find_min_moles_ALTERNATIVE()
+    hkp.execute_algorithm()
+    # hkp.find_min_moles_ALTERNATIVE()
     # hkp.anonymization_verifier()
