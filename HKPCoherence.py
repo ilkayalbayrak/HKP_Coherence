@@ -73,21 +73,22 @@ class HKPCoherence:
         self.MM = dict()
         self.score_table = None
         self.mole_tree_root = None
-        # self.original_mole_tree = None
         self.suppressed_items = None
         self.processed_public_items = None  # public items after suppression
         self.total_occurrence_count = 0  # sum of all item occurrences in dataset
         self.suppressed_item_occurrence_count = 0  # supp item occurrence count
         for index, row in enumerate(self.dataset):
-            # print(index)
-            # public = [i for i in row if i not in private_item_list]
-            # private = [i for i in row if i in private_item_list]
-            # self.transactions.append({"id": index, "public": public, "private": private})
             self.total_occurrence_count += len(row)
 
     def get_itemset_transaction_list(self, data_iterator, public_item_list, private_item_list):
         """
-        :return:
+        Return frozenset versions of the data for faster process.
+        For public and private item lists, each individual item is a frozenset
+
+        :param data_iterator: Dataset
+        :param public_item_list: The list of the public items
+        :param private_item_list: The list of the private items
+        :return: public_item_set, private_item_set, transaction_list
         """
         transaction_list = list()
         public_item_set = set()
@@ -105,16 +106,17 @@ class HKPCoherence:
 
         return public_item_set, private_item_set, transaction_list
 
-    def suppress_size1_moles(self, public_item_set, private_item_set, transaction_list, freq_set):
+    def suppress_size1_moles(self, public_item_set, private_item_set, transaction_list, support_set):
         """
-        Calculate support and p_breach and return a subset of items
-        that satisfies the conditions for k and h
+        Calculate support and P_breach values for original size-1 public items as betas.
+        Remove all the size-1 moles from all transactions in the dataset
+        :returns: candidate set for finding min moles, and a transaction list without size-1 moles
 
         :param private_item_set:
         :param public_item_set:
         :param transaction_list:
-        :param freq_set:
-        :return:
+        :param support_set: Support dictionary of all betas
+        :return: _item_set, clean_transaction_list
         """
         # public?
         """
@@ -124,7 +126,7 @@ class HKPCoherence:
         _item_set, size1_moles = self.get_moles_and_candidates(public_item_set,
                                                                private_item_set,
                                                                transaction_list,
-                                                               freq_set,
+                                                               support_set,
                                                                )
 
         self.size1_moles = size1_moles
@@ -151,15 +153,27 @@ class HKPCoherence:
             [i.union(j) for i in item_set for j in item_set if len(i.union(j)) == length]
         )
 
-    def get_moles_and_candidates(self, item_set, private_item_set, transaction_list, freq_set, mole_list=None):
+    def get_moles_and_candidates(self, item_set, private_item_set, transaction_list, support_set, mole_list=None):
+        """
+        Function to find F and M; extendible moles and minimal moles
+
+        :param item_set: Set of extendible moles
+        :param private_item_set:
+        :param transaction_list:
+        :param support_set:
+        :param mole_list:
+        :return: Fi+1, Mi+1
+        """
 
         if mole_list is None:
             mole_list = set([])
+
         _item_set = set()
         local_set = defaultdict(int)
         minimal_moles = set()
         p_breach_dict = {}
 
+        # FIXME: Operation below takes so much memory, when calculating for p==3 11 gigs of ram was full
         # create sets of beta->e for counting support for breach probability of beta
         for beta in item_set:
             p_breach_dict[beta] = defaultdict(int)
@@ -172,7 +186,7 @@ class HKPCoherence:
         for transaction in transaction_list:
             for beta in item_set:
                 if beta.issubset(transaction):
-                    freq_set[beta] += 1
+                    support_set[beta] += 1
                     local_set[beta] += 1
                     for beta_e in p_breach_dict[beta].keys():
                         if beta_e.issubset(transaction):
@@ -183,6 +197,7 @@ class HKPCoherence:
         for item, support in local_set.items():
             if support < self.k or max(p_breach_dict[item].values()) / support > self.h:
                 flag = False
+                # TODO: we may need to check for moles of all levels, got one MM != mole_num error even after checking for the previous level of moles
                 for m in mole_list:
                     if m.issubset(item):
                         flag = True
@@ -200,7 +215,6 @@ class HKPCoherence:
     def find_minimal_moles(self):
         """
         Apriori algorithm like fast solution to find all the minimal moles in the dataset
-        :return:
         """
 
         # get the frozen set versions of dataset and the public items
@@ -208,7 +222,7 @@ class HKPCoherence:
                                                                                                 self.public_item_list,
                                                                                                 self.private_item_list)
 
-        freq_set = defaultdict(int)
+        support_set = defaultdict(int)
         F = dict()
         M = dict()
 
@@ -216,7 +230,7 @@ class HKPCoherence:
         one_C_set, transaction_list = self.suppress_size1_moles(public_item_set,
                                                                 private_item_set,
                                                                 transaction_list,
-                                                                freq_set)
+                                                                support_set)
 
         start_time = time.time()
         current_F_set = one_C_set
@@ -227,10 +241,11 @@ class HKPCoherence:
             F[p - 1] = current_F_set
             current_F_set = self.join_set(current_F_set, p)
             current_C_set, current_M_set = self.get_moles_and_candidates(
-                current_F_set, private_item_set, transaction_list, freq_set, current_M_set
+                current_F_set, private_item_set, transaction_list, support_set, current_M_set
             )
             current_F_set = current_C_set
             M[p] = current_M_set
+            print(f"P: {p}, M length: {len(M[p])}")
             p += 1
 
         minimal_moles = []
@@ -247,7 +262,8 @@ class HKPCoherence:
         for mole_level in minimal_moles:
             print(mole_level)
 
-        self.support_dict = freq_set
+        # TODO: remove items with len(beta) > 1 from support dict we dont need them
+        self.support_dict = support_set
         return pass_time
 
     # TODO: Make a new anonymization verifier
@@ -666,7 +682,7 @@ class HKPCoherence:
         root = self.mole_tree_root
 
         # check if MM values in score table equal total mole_num count
-        # utils.check_MM_equal_mole_num(root, score_table)
+        utils.check_MM_equal_mole_num(root, score_table)
 
         # process all items
         while score_table:
@@ -721,9 +737,9 @@ class HKPCoherence:
 
             # Suppress all items in suppressed_items from the database D
             for e in suppressed_items:
-                for t in self.transactions:
-                    if e in t["public"]:
-                        t["public"].remove(e)
+                for t in self.dataset:
+                    if e in t:
+                        t.remove(e)
 
             distortion = self.calculate_distortion()
             performance_records["time_total"] = int(time.time() - start_time)
@@ -739,27 +755,9 @@ class HKPCoherence:
                   f"DISTORTION: {distortion}, TOTAL TIME: {performance_records['time_total']}, "
                   f"TIME FIND MIN-MOLES: {performance_records['time_find_min_moles']}\n")
 
-            print("Preparing Anonymized txt file")
-            with open(r'Dataset/Anonymized/public.txt', 'w') as f:
-                for t in self.transactions:
-                    # merge public and private lists to get full transaction
-                    # merge = t.public + t.private
-                    merge = ' '.join(map(str, t["public"]))
-                    f.write(f"{merge}\n")
-                print('Done')
-
-            with open(r'Dataset/Anonymized/private.txt', 'w') as f:
-                for t in self.transactions:
-                    # merge public and private lists to get full transaction
-                    # merge = t.public + t.private
-                    merge = ' '.join(map(str, t["private"]))
-                    f.write(f"{merge}\n")
-                print('Done')
-
+            print("\nPreparing the anonymized file")
             with open(r'Dataset/Anonymized/anonymized.txt', 'w') as f:
-                for t in self.transactions:
-                    # merge public and private lists to get full transaction
-                    merge = t["public"] + t["private"]
-                    merge = ' '.join(map(str, merge))
-                    f.write(f"{merge}\n")
+                for t in self.dataset:
+                    transaction = ' '.join(map(str, t))
+                    f.write(f"{transaction}\n")
                 print('Done')
