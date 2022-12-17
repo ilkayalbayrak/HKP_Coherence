@@ -1,11 +1,11 @@
 import time
-import itertools
 import os
 import pandas as pd
+import utils
 
 from anytree import NodeMixin, RenderTree, search, PreOrderIter
-
-import utils
+from itertools import chain, combinations
+from collections import defaultdict
 
 '''
     #######- GREEDY ALGORITHM -#######
@@ -83,6 +83,139 @@ class HKPCoherence:
             private = [i for i in row if i in private_item_list]
             self.transactions.append({"id": index, "public": public, "private": private})
             self.total_occurrence_count += len(row)
+
+    def get_itemset_transaction_list(self, data_iterator, public_item_list, private_item_list):
+        """
+        :return:
+        """
+        transaction_list = list()
+        public_item_set = set()
+        private_item_set = set()
+
+        for record in data_iterator:
+            transaction = frozenset(record)
+            transaction_list.append(transaction)
+
+        for item in public_item_list:
+            public_item_set.add(frozenset([item]))
+
+        for item in private_item_list:
+            private_item_set.add(frozenset([item]))
+
+        return public_item_set, private_item_set, transaction_list
+
+    def suppress_size1_moles_ALTERNATIVE(self, public_item_set, private_item_set, transaction_list, freq_set):
+        """
+        Calculate support and p_breach and return a subset of items
+        that satisfies the conditions for k and h
+
+        :param private_item_set:
+        :param public_item_set:
+        :param transaction_list:
+        :param freq_set:
+        :return:
+        """
+        # public?
+        """
+        how do we count sup for beta and beta->e in one go
+        """
+
+        _item_set, size1_moles = self.get_moles_and_candidates(public_item_set,
+                                                               private_item_set,
+                                                               transaction_list,
+                                                               freq_set)
+
+        self.size1_moles = size1_moles
+        print(f"Non-mole size-1 items len: {len(_item_set)}, items:{_item_set}")
+
+        clean_transaction_list = []
+        for transaction in transaction_list:
+            temp_transaction = list(transaction)
+            for item in size1_moles:
+                if item.issubset(transaction):
+                    temp_item = list(item)
+                    temp_transaction.remove(temp_item[0])
+
+            clean_transaction_list.append(frozenset(temp_transaction))
+
+        print(f"len clean transaction list: {len(clean_transaction_list)}")
+        return _item_set, clean_transaction_list
+
+    @staticmethod
+    def join_set(item_set, length):
+        """Join a set with itself and returns the n-element itemsets"""
+        return set(
+            [i.union(j) for i in item_set for j in item_set if len(i.union(j)) == length]
+        )
+
+    def get_moles_and_candidates(self, item_set, private_item_set, transaction_list, freq_set):
+
+        _item_set = set()
+        local_set = defaultdict(int)
+        minimal_moles = set()
+        p_breach_dict = {}
+
+        # create sets of beta->e for counting support for breach probability of beta
+        for beta in item_set:
+            p_breach_dict[beta] = defaultdict(int)
+            for e in private_item_set:
+                beta_e = beta.copy()
+                beta_e = beta_e.union(e)
+                p_breach_dict[beta][beta_e] = 0
+
+        # calculate support for beta and beta->e
+        for transaction in transaction_list:
+            for beta in item_set:
+                if beta.issubset(transaction):
+                    freq_set[beta] += 1
+                    local_set[beta] += 1
+                    for beta_e in p_breach_dict[beta].keys():
+                        if beta_e.issubset(transaction):
+                            p_breach_dict[beta][beta_e] += 1
+
+        # check if beta is a mole or not
+        # if Sup(beta) < k or sup(beta->e)/sup(beta) > h, then mole
+        for item, support in local_set.items():
+            if support < self.k or max(p_breach_dict[item].values()) / support > self.h:
+                minimal_moles.add(item)
+            else:
+                _item_set.add(item)
+
+        print(f"Non-mole betas len: {len(_item_set)}, betas:{_item_set}")
+
+        return _item_set, minimal_moles
+
+    def find_min_moles_ALTERNATIVE(self):
+        """
+        Apriori algorithm like fast solution to find all the minimal moles in the dataset
+        :return:
+        """
+
+        # get the frozen set versions of dataset and the public items
+        public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
+                                                                                                self.public_item_list,
+                                                                                                self.private_item_list)
+
+        freq_set = defaultdict(int)
+        F = dict()
+        M = dict()
+
+        # public items that non-moles and transaction list cleaned from size-1 moles
+        one_C_set, transaction_list = self.suppress_size1_moles_ALTERNATIVE(public_item_set,
+                                                                            private_item_set,
+                                                                            transaction_list,
+                                                                            freq_set)
+        current_F_set = one_C_set
+        p = 2
+        while p <= self.p and current_F_set != set([]):
+            F[p - 1] = current_F_set
+            current_F_set = self.join_set(current_F_set, p)
+            current_C_set, current_M_set = self.get_moles_and_candidates(
+                current_F_set, private_item_set, transaction_list, freq_set
+            )
+            current_F_set = current_C_set
+            M[p] = current_M_set
+            p += 1
 
     def Sup(self, beta) -> int:
         """
@@ -227,6 +360,9 @@ class HKPCoherence:
         # print(f"label: {start_node.label}, mole_num: {len(temp)}")
         return temp
 
+
+
+    # TODO: change canditate generation and finding F and M, following the Apriori algorithm
     def find_minimal_moles(self):
         print("\nStarted identification process for Minimal moles and Extendible non-moles")
         start_time = time.time()
@@ -287,7 +423,7 @@ class HKPCoherence:
 
         C_plus = list()
         # list of public items in Fi
-        unique_items = list(set(itertools.chain(*F)))
+        unique_items = list(set(chain(*F)))
 
         for beta in F:
             for i in unique_items:
