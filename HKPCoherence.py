@@ -177,10 +177,10 @@ class HKPCoherence:
         # create sets of beta->e for counting support for breach probability of beta
         for beta in item_set:
             p_breach_dict[beta] = defaultdict(int)
-            for e in private_item_set:
-                beta_e = beta.copy()
-                beta_e = beta_e.union(e)
-                p_breach_dict[beta][beta_e] = 0
+        #     for e in private_item_set:
+        #         beta_e = beta.copy()
+        #         beta_e = beta_e.union(e)
+        #         p_breach_dict[beta][beta_e] = 0
 
         # calculate support for beta and beta->e
         for transaction in transaction_list:
@@ -188,14 +188,17 @@ class HKPCoherence:
                 if beta.issubset(transaction):
                     support_set[beta] += 1
                     local_set[beta] += 1
-                    for beta_e in p_breach_dict[beta].keys():
-                        if beta_e.issubset(transaction):
-                            p_breach_dict[beta][beta_e] += 1
+                    for e in private_item_set:
+                        if e.issubset(transaction):
+                            p_breach_dict[beta][e] += 1
 
         # check if beta is a mole or not
         # if Sup(beta) < k or sup(beta->e)/sup(beta) > h, then mole
         for item, support in local_set.items():
-            if support < self.k or max(p_breach_dict[item].values()) / support > self.h:
+            support_beta_e = max(p_breach_dict[item].values(), default=0)
+            print(f"support beta->e: {support_beta_e}")
+
+            if support < self.k or support_beta_e / support > self.h:
                 flag = False
                 # TODO: we may need to check for moles of all levels, got one MM != mole_num error even after checking for the previous level of moles
                 for m in mole_list:
