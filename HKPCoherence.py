@@ -728,7 +728,7 @@ class HKPCoherence:
 
             self.suppressed_items = suppressed_items
             self.processed_public_items = [i for i in self.public_item_list if
-                                           i not in suppressed_items and i not in self.size1_moles]
+                                           i not in suppressed_items and frozenset([i]) not in self.size1_moles]
 
             for item in self.suppressed_items:
                 self.suppressed_item_occurrence_count += self.support_dict[frozenset([item])]
@@ -746,8 +746,9 @@ class HKPCoherence:
             print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}, Size-1 moles: {len(self.size1_moles)}, "
                   f"Total Suppressed: {len(suppressed_items) + len(self.size1_moles)}\n"
+                  f"Original number of public items: {len(self.public_item_list)}\n"
                   f"Public items after suppression, len:{len(self.processed_public_items)}, "
-                  f"{self.processed_public_items}")
+                  f"{self.processed_public_items}\n")
 
             # Write performance records to csv file for later use
             # Open the file in "append" mode
