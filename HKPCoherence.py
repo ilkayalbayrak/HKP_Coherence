@@ -166,14 +166,13 @@ class HKPCoherence:
         """
 
         if mole_list is None:
-            mole_list = set([])
+            mole_list = dict()
 
         _item_set = set()
         local_set = defaultdict(int)
         minimal_moles = set()
         p_breach_dict = {}
 
-        # FIXME: Operation below takes so much memory, when calculating for p==3 11 gigs of ram was full
         # create sets of beta->e for counting support for breach probability of beta
         for beta in item_set:
             p_breach_dict[beta] = defaultdict(int)
@@ -196,22 +195,21 @@ class HKPCoherence:
         # if Sup(beta) < k or sup(beta->e)/sup(beta) > h, then mole
         for item, support in local_set.items():
             support_beta_e = max(p_breach_dict[item].values(), default=0)
-            print(f"support beta->e: {support_beta_e}")
+            # print(f"support beta->e: {support_beta_e}")
 
             if support < self.k or support_beta_e / support > self.h:
                 flag = False
-                # TODO: we may need to check for moles of all levels, got one MM != mole_num error even after checking for the previous level of moles
-                for m in mole_list:
-                    if m.issubset(item):
-                        flag = True
-                        break
+                for p, moles in mole_list.items():
+                    for m in moles:
+                        if m.issubset(item):
+                            flag = True
+                            break
                 if not flag:
                     minimal_moles.add(item)
             else:
-                # FIXME: this check may not be necessary, if if there is a problem with build_mole_tree first
                 _item_set.add(item)
 
-        print(f"Non-mole betas len: {len(_item_set)}, betas:{_item_set}")
+        print(f"\nNon-mole betas len: {len(_item_set)}, betas:{_item_set}")
 
         return _item_set, minimal_moles
 
@@ -237,14 +235,14 @@ class HKPCoherence:
 
         start_time = time.time()
         current_F_set = one_C_set
-        current_M_set = None
+        # current_M_set = None
         p = 2
 
         while p <= self.p and current_F_set != set([]):
             F[p - 1] = current_F_set
             current_F_set = self.join_set(current_F_set, p)
             current_C_set, current_M_set = self.get_moles_and_candidates(
-                current_F_set, private_item_set, transaction_list, support_set, current_M_set
+                current_F_set, private_item_set, transaction_list, support_set, M
             )
             current_F_set = current_C_set
             M[p] = current_M_set
@@ -669,11 +667,11 @@ class HKPCoherence:
                                "time_find_min_moles": 0,
                                "time_total": 0}
 
+        start_time = time.time()
+
         # find minimal moles M* from D
         pass_time = self.find_minimal_moles()
         performance_records["time_find_min_moles"] = int(pass_time)
-
-        start_time = time.time()
 
         # Build the mole tree
         self.build_mole_tree()
@@ -727,16 +725,13 @@ class HKPCoherence:
         # after processing all items in the score-table, remove the items tagged as suppressed items from
         # the transactions in order to anonymize
         if not score_table:
-            print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
-                  f"Suppressed items length: {len(suppressed_items)}, Size-1 moles: {len(self.size1_moles)}, "
-                  f"Total Suppressed: {len(suppressed_items) + len(self.size1_moles)}")
+
             self.suppressed_items = suppressed_items
             self.processed_public_items = [i for i in self.public_item_list if
                                            i not in suppressed_items and i not in self.size1_moles]
-            for row in self.dataset:
-                for item in row:
-                    if item in self.suppressed_items:
-                        self.suppressed_item_occurrence_count += 1
+
+            for item in self.suppressed_items:
+                self.suppressed_item_occurrence_count += self.support_dict[frozenset([item])]
 
             # Suppress all items in suppressed_items from the database D
             for e in suppressed_items:
@@ -747,6 +742,12 @@ class HKPCoherence:
             distortion = self.calculate_distortion()
             performance_records["time_total"] = int(time.time() - start_time)
             performance_records["distortion"] = distortion
+
+            print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
+                  f"Suppressed items length: {len(suppressed_items)}, Size-1 moles: {len(self.size1_moles)}, "
+                  f"Total Suppressed: {len(suppressed_items) + len(self.size1_moles)}\n"
+                  f"Public items after suppression, len:{len(self.processed_public_items)}, "
+                  f"{self.processed_public_items}")
 
             # Write performance records to csv file for later use
             # Open the file in "append" mode
