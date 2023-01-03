@@ -10,3 +10,4 @@ test_main.py
 scratch4.py
 process_data.ipynb
 notes.txt
+__pycache__
