@@ -1,8 +1,12 @@
 Dataset/Unused
-Plots
+#Plots
+Pickles
 .idea
 .ipynb_checkpoints
 scracth.py
 scratch3.py
 scratchv2.py
 test_main.py
+scratch4.py
+process_data.ipynb
+notes.txt

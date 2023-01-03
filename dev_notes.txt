@@ -1,10 +1,95 @@
-[x] Identify and suppress minimal nodes
-[x] Figure out how to follow the information loss, Assume IL(e)=1 for now
-[x] Add sigma parameter to decide percentage of private items among all unique items
+# 
+# p: we measure the “power” of the attacker by the
 
+"""
+    A database D has "(h,k,p)-coherence" if, for every such combination β of no more than p
+    public items, either no transaction contains β, or the set of
+    transactions containing β, called β-cohort, contains at least k
+    transactions and no more than h percent of these transactions
+    contains a common private item.
 
-# prepare runtime plots for p, k and sigma
-# prepare distortion plots for p,k and sigma
+    U: universe, public + private items
+    
+    D: database
+    
+    p: maximum number p of public items that can be obtained as prior
+        knowledge in a single attack, and measure the level of protection
+        relative to that power of attackers
+        
+    beta: combination of puclic items no more than "p"
+    
+    beta_cohort: set of transactions containing "beta". β-cohort requires its transactions to contain all the
+                items in β, but not necessarily contain items not in β
+                
+    Sup(beta): Sup(β), the support of β, denotes the number of transactions in β-cohort.
+    
+    k,h: "beta_cohort" contains at least "k" transactions and no more than "h" percent of these transactions
+        contains a common private item.
+        
+    **The probability that a transaction contains e, given that it contains β, is
+            P(β→e)=Sup(β∪{e})/Sup(β).
+            
+    P_breach(beta): is the breach probability of beta, to be the maximmum P(beta->e) for any private item e.
+                    (we consider only a single private item e in an attack β→e.)
+        
+ 
+    In other words, (h,k,p)-coherence ensures that, for an attacker with the power p, the
+    probability of linking an individual to a transaction is limited to
+    1/k and the probability of linking an individual to a private item is
+    limited to h.
+    
+    equivalence_class: A group of records that are indistinguishable from each other is often 
+                        referred to as an equivalence class.
+    
+                        After anonymization, quasi-identifier values of several records are equal, 
+                        thus form- ing an equivalence class. In this way, an individual would not be 
+                        easily identified because the attacker obtains only the equivalence class without 
+                        additional knowledge [2].
+        
+    
+    information_loss: We measure "information loss" by the amount of items suppressed.
+                    the total information loss in the transformation, where ∑ is over
+                    all the items e suppressed.
+                        
+    
+    item_suppression: by suppressing an item from D, we simply delete the item fromm all transactions that
+                        contain the item. 
+                        EXAMPLE:
+                            After suppressing the items a
+                            and f from the transactions {a, b, HIV}, {a, d, f, HIV} and {b, d,
+                            Diabetes}, the transactions become {b, HIV}, {d, HIV} and {b, d,
+                            diabetes}.
+                            
+    
+    
+    beta is a pub itemset with len(beta) <= p and Sup(beta)>0
+    
+    mole: beta is called a "mole" wrt (h,k,p), if either;
+        Sup(beta)<k or P_breach(beta)>h. Otherwise, beta is called "non-mole"
+        D is (h,k,p)-coherent if D contains no moles
+        
+    Minimal Mole: A mole is called minimal, if its subsets are non-moles. Example ab is a minimal mole if subsets a and b are non-moles.
+                            
+    MM(e): denotes the number of minimal moles containing the public item e
+    
+    Mi: denotes the set of all minimal moles of size i
+    
+    Fi: denotes the set of all extendible non-moles
+    
+    Extendible non-mole: A non-mole is said to be extendible if it contains no mole.
+    
+    M*: denotes the set of all minimal moles of size (2 <= i <= p)
+    
+    ########- ITEM SUPPRESSION/INFORMATION LOSS -########
+    We will modify D until its hkp-coherent.
+    
+    
+    ########- PROBLEM -########
+    Making the database D hkp-coherent is an optimization problem because one version of D' may lead to a lower 
+    information_loss than the other versions of D', D'' etc.
+    
+    We will assume D has a hkp-cohesion and use a greedy algorithm
+    
+    ########- PROBLEM -########
 
-# distortion should be average of 5 random selections for sigma|U| public items
-# Finding moles while using a low k value like k==5 takes too much time
+"""

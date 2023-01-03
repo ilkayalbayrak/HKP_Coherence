@@ -29,8 +29,9 @@ def check_MM_equal_mole_num(tree_root, score_table):
         test_list = search.findall(tree_root, filter_=lambda node: node.label == item)
         for i in test_list:
             count += i.mole_num
-        assert count == score_table[item]['MM'], f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, " \
-                                                 f"mole num count: {count}"
+        assert count == score_table[item][
+            'MM'], f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, " \
+                   f"mole num count: {count}"
         if count != score_table[item]['MM']:
             print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
                   f"mole num count: {count}")
@@ -48,3 +49,12 @@ def convert_txt_to_csv(input_txt, output_csv):
     data_df = pd.DataFrame(dataset)
     print(data_df.head())
     data_df.to_csv(output_csv, index=False, header=False)
+
+
+def cut_txt_file(input_file, output_file, n: int):
+    # funcntion for cutting first n lines of a text file
+    # first n lines written into a specified output file for later use
+    with open(input_file, "r") as original_file, open(output_file, "w") as cut_file:
+        head = [next(original_file) for x in range(n)]
+        for line in head:
+            cut_file.write(line)
