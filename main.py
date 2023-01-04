@@ -78,7 +78,7 @@ def prepare_data(data_path, sigma):
 
 
 if __name__ == "__main__":
-    DATA_PATH = "./Dataset/T40I10D100K_10000.txt"
+    DATA_PATH = "./Dataset/T40I10D100K.dat"
 
     p_list = [2, 3, 4, 5, 6, 7]
     k_list = [5, 10, 20, 30, 40, 50]
@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
     # STANDARD PARAMETERS
     H = 0.4
-    K = 5
+    K = 30
     P = 4
     SIGMA = 0.15  # percentage of public items selected from the dataset
 
