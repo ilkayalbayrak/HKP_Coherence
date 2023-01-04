@@ -1,6 +1,8 @@
 import itertools
 import pandas as pd
+import numpy as np
 from anytree import search
+import HKPCoherence
 
 
 def find_subarrays_of_size_n(l: list, n: int):
@@ -58,3 +60,74 @@ def cut_txt_file(input_file, output_file, n: int):
         head = [next(original_file) for x in range(n)]
         for line in head:
             cut_file.write(line)
+
+
+def distortion_p(data_path, h, k, p_list, sigma):
+    print(f"\n**************** DISTORTION VS P ****************\n")
+
+    for p in p_list:
+        dataset, public_items, private_items = prepare_data(data_path, sigma=sigma)
+        print(f"\n-------------- DISTORTION FOR P: {p} --------------\n")
+
+        hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h, k, p=p, sigma=sigma)
+
+        # start the anonymization process
+        hkp.execute_algorithm()
+
+
+def distortion_sigma(data_path, sigma_list, h, k, p):
+    print(f"\n**************** DISTORTION VS SIGMA ****************\n")
+
+    for sigma in sigma_list:
+        print(f"\n-------------- DISTORTION FOR SIGMA: {sigma} --------------\n")
+
+        dataset, public_items, private_items = prepare_data(data_path, sigma=sigma)
+
+        # create the hkp object
+        hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h, k, p, sigma=sigma)
+
+        # start the anonymization process
+        hkp.execute_algorithm()
+
+
+def distortion_k(data_path, h, k_list, p, sigma):
+    print(f"\n**************** DISTORTION VS K ****************\n")
+
+    for k in k_list:
+        dataset, public_items, private_items = prepare_data(data_path, sigma=sigma)
+        print(f"\n-------------- DISTORTION FOR K: {k} --------------\n")
+
+        hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h, k=k, p=p, sigma=sigma)
+
+        # start the anonymization process
+        hkp.execute_algorithm()
+
+
+def prepare_data(data_path, sigma):
+    # set a random seed
+    # np.random.seed(42)
+
+    # make a list of all items that can be found the dataset
+    unique_items = find_unique_items(data_path)
+    unique_items = [int(i) for i in unique_items]
+    print(f"Number of Unique items: {len(unique_items)}")
+
+    # shuffle all items
+    unique_items = np.random.permutation(unique_items)
+
+    # slice SIGMA percent of the items as public items
+    public_items = unique_items[:int(len(unique_items) * sigma)]
+
+    # determine the private items
+    private_items = [i for i in unique_items if i not in public_items]
+
+    print(f"Private items: {private_items}\nPrivate len: {len(private_items)}\n\n"
+          f"Public items: {public_items}\nPublic len: {len(public_items)}")
+
+    # read all the data from the text file
+    dataset = []
+    with open(data_path, "r") as file:
+        for line in file:
+            dataset.append([int(i) for i in set(line.rstrip().split())])
+
+    return dataset, public_items, private_items

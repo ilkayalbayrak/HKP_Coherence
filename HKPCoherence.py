@@ -7,15 +7,6 @@ from anytree import NodeMixin, RenderTree, search, PreOrderIter
 from itertools import chain, combinations
 from collections import defaultdict
 
-'''
-    #######- GREEDY ALGORITHM -#######
-    A public item must be suppressed, if the item on ITS OWN IS A MOLE.
-        If a public item is a (size-1) mole, the item will
-        not occur in any (h,k,p)-cohesion of D, thus, can be suppressed in
-        a preprocessing step
-
-'''
-
 
 class Node(NodeMixin):
     def __init__(self, label=None, mole_num=None, node_link=None, parent=None, children=None):
@@ -34,15 +25,6 @@ class Node(NodeMixin):
         self.parent = parent
         if children:
             self.children = children
-
-
-# # this can be an inner class of hkp coherence
-# class Transaction:
-#     # tag the private and pub items of each transaction in data
-#     def __init__(self, ID: int, public: list, private: list):
-#         self.ID = ID
-#         self.public = public
-#         self.private = private
 
 
 class HKPCoherence:

@@ -17,4 +17,8 @@ The dataset is accessible in the <i>Dataset</i> folder.
 <hr>
 
 <h2>Usage</h2>
+
+Go to _main.py_ -> pick a version of the dataset from the _Dataset_ folder ->
+set _h, k, p and sigma parameters_ --> run
+
 <hr>
