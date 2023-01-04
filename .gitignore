@@ -1,5 +1,6 @@
 Dataset/Unused
 #Plots
+Plots/test_performance_records.csv
 Pickles
 .idea
 .ipynb_checkpoints

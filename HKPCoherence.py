@@ -213,15 +213,10 @@ class HKPCoherence:
 
         return _item_set, minimal_moles
 
-    def find_minimal_moles(self):
+    def find_minimal_moles(self, public_item_set, private_item_set, transaction_list):
         """
         Apriori algorithm like fast solution to find all the minimal moles in the dataset
         """
-
-        # get the frozen set versions of dataset and the public items
-        public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
-                                                                                                self.public_item_list,
-                                                                                                self.private_item_list)
 
         support_set = defaultdict(int)
         F = dict()
@@ -257,7 +252,6 @@ class HKPCoherence:
             minimal_moles.append(mole_level_container)
 
         pass_time = time.time() - start_time
-        self.moles = minimal_moles
 
         print(f"Min-moles: {minimal_moles}")
         for mole_level in minimal_moles:
@@ -265,9 +259,27 @@ class HKPCoherence:
 
         # TODO: remove items with len(beta) > 1 from support dict we dont need them
         self.support_dict = support_set
-        return pass_time
+        return minimal_moles, pass_time
 
-    # TODO: Make a new anonymization verifier
+    def anonymization_verifier(self):
+        # get the frozen set versions of dataset and the item lists
+        # the public items are the unsuppressed ones after the process
+        public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
+                                                                                                self.processed_public_items,
+                                                                                                self.private_item_list)
+        # run minimal mole finder
+        min_moles, _ = self.find_minimal_moles(public_item_set, private_item_set, transaction_list)
+
+        # check all mole levels and count moles, if any
+        count = 0
+        for p in min_moles:
+            count += len(p)
+
+        # if there are no moles found, then the anonymization is a Success, congrats
+        if count == 0:
+            print(f'\n#---- Congrats! Anonymization has SUCCEEDED ----#\n')
+        else:
+            print(f'\n#---- Boo! Anonymization has FAILED ----#\n')
 
     @staticmethod
     def all_paths(start_node: Node) -> list:
@@ -653,7 +665,7 @@ class HKPCoherence:
         node.parent = None
         print("----------------------------")
 
-    def execute_algorithm(self):
+    def execute_algorithm(self, verification=True):
         """
         Run complete anonymization algorithm
         :return:
@@ -669,8 +681,14 @@ class HKPCoherence:
 
         start_time = time.time()
 
+        # get the frozen set versions of dataset and the public items
+        public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
+                                                                                                self.public_item_list,
+                                                                                                self.private_item_list)
+
         # find minimal moles M* from D
-        pass_time = self.find_minimal_moles()
+        # get time pass as a return value, ugly but OK for the moment, TODO:change later
+        self.moles, pass_time = self.find_minimal_moles(public_item_set, private_item_set, transaction_list)
         performance_records["time_find_min_moles"] = int(pass_time)
 
         # Build the mole tree
@@ -766,3 +784,6 @@ class HKPCoherence:
                     transaction = ' '.join(map(str, t))
                     f.write(f"{transaction}\n")
                 print('Done')
+
+        if verification is True:
+            self.anonymization_verifier()
