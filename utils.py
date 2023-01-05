@@ -34,12 +34,6 @@ def check_MM_equal_mole_num(tree_root, score_table):
         assert count == score_table[item][
             'MM'], f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, " \
                    f"mole num count: {count}"
-        if count != score_table[item]['MM']:
-            print(f"{index} NOT EQUAL -- Item: {item}, Score_table MM: {score_table[item]['MM']}, "
-                  f"mole num count: {count}")
-        else:
-            print(
-                f"{index} -- Item: {item}, Score_table MM: {score_table[item]['MM']}, mole num count: {count}")
 
 
 def convert_txt_to_csv(input_txt, output_csv):

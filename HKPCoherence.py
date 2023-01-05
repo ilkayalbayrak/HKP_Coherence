@@ -4,7 +4,6 @@ import pandas as pd
 import utils
 
 from anytree import NodeMixin, RenderTree, search, PreOrderIter
-from itertools import chain, combinations
 from collections import defaultdict
 
 
@@ -100,10 +99,7 @@ class HKPCoherence:
         :param support_set: Support dictionary of all betas
         :return: _item_set, clean_transaction_list
         """
-        # public?
-        """
-        how do we count sup for beta and beta->e in one go
-        """
+
 
         _item_set, size1_moles = self.get_moles_and_candidates(public_item_set,
                                                                private_item_set,
@@ -112,7 +108,7 @@ class HKPCoherence:
                                                                )
 
         self.size1_moles = size1_moles
-        print(f"Non-mole size-1 items len: {len(_item_set)}, items:{_item_set}")
+        print(f"Non-mole size-1 items count: {len(_item_set)}, items:{_item_set}")
 
         clean_transaction_list = []
         for transaction in transaction_list:
@@ -158,10 +154,6 @@ class HKPCoherence:
         # create sets of beta->e for counting support for breach probability of beta
         for beta in item_set:
             p_breach_dict[beta] = defaultdict(int)
-        #     for e in private_item_set:
-        #         beta_e = beta.copy()
-        #         beta_e = beta_e.union(e)
-        #         p_breach_dict[beta][beta_e] = 0
 
         # calculate support for beta and beta->e
         for transaction in transaction_list:
@@ -235,10 +227,6 @@ class HKPCoherence:
 
         pass_time = time.time() - start_time
 
-        print(f"Min-moles: {minimal_moles}")
-        for mole_level in minimal_moles:
-            print(mole_level)
-
         # TODO: remove items with len(beta) > 1 from support dict we dont need them
         self.support_dict = support_set
         return minimal_moles, pass_time
@@ -252,7 +240,7 @@ class HKPCoherence:
         # run minimal mole finder
         min_moles, _ = self.find_minimal_moles(public_item_set, private_item_set, transaction_list)
 
-        # check all mole levels and count moles, if any
+        # check all mole levels and count moles if any
         count = 0
         for p in min_moles:
             count += len(p)
@@ -338,7 +326,6 @@ class HKPCoherence:
         # store MM value for each public item e
         self.MM = items_mm_count
 
-        print(f"\nOrdered moles: {ordered_moles}\n")
         return ordered_moles
 
     def info_loss(self, e):
@@ -547,7 +534,7 @@ class HKPCoherence:
         :param start_node:
         :return:
         """
-        print(f"\nTree Starting from Node: {start_node.label}")
+
         for pre, _, node in RenderTree(start_node):
             treestr = u"%s%s:%s" % (pre, node.label, node.mole_num)
             print(treestr.ljust(8))
@@ -583,43 +570,27 @@ class HKPCoherence:
         """
         assert node.label in score_table.keys(), f"node: {node.label} was not in the score-table"
 
-        print(f"\n---- Delete Subtree ----\n"
-              f"node: {node.label}, mole_num: {node.mole_num}, node_link_len: {self.node_link_length(node)}, "
-              f"MM: {score_table[node.label]['MM']}, "
-              f"head_link: {'TRUE' if score_table[node.label]['head_of_link'] == node else 'FALSE'}")
-
         # delete all the minimal moles at the subtree node
-        print("----# Subtree iter #----")
         for w in PreOrderIter(node):
-
-            print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
 
             # decrease w.MM by w.mole_num
             score_table[w.label]["MM"] -= w.mole_num
             assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
                                                     f"MM: {score_table[w.label]['MM']}"
 
-            # FIXME: the root of the errors might be heres
             # remove the processed nodes from their respective node_links
-            # if w is not node:
-            #     self.delete_node_link(link_node=w,
-            #                           score_table=score_table)
             self.delete_node_link(link_node=w,
                                   score_table=score_table)
             # if MM == 0, then remove the item from the score-table
             if score_table[w.label]["MM"] == 0:
-                print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
-                      f"thus it will be removed from the score-table")
                 del score_table[w.label]
 
-        print("----# Ancestors of node iter #----")
         # find all the ancestors of the node
         ancestors = [ancestor for ancestor in node.ancestors]
-        print(f"node.ancestors: {[node.label for node in ancestors]}")
         for w in ancestors:
             # Do not count the root node as an ancestor
             if not w.is_root:
-                print(f"label: {w.label}, mole_num: {w.mole_num}")
+
                 # decrement w.mole_num and w.MM by node.mole_num
                 w.mole_num -= node.mole_num
                 score_table[w.label]["MM"] -= node.mole_num
@@ -630,7 +601,6 @@ class HKPCoherence:
 
                 # if mole_num hits 0, then cut node w from the tree
                 if w.mole_num == 0:
-                    print(f"label: {w.label}, mole_num has become 0, thus it will be removed from the tree")
                     w.parent = None
 
                     # if mole_num is 0 remove from the node link
@@ -639,13 +609,10 @@ class HKPCoherence:
                                           score_table=score_table)
                 # if MM of w hits 0 in score-table, remove w from the score-table
                 if score_table[w.label]["MM"] == 0:
-                    print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
-                          f"thus it will be removed from the score-table")
                     del score_table[w.label]
 
         # lastly remove the node from tree
         node.parent = None
-        print("----------------------------")
 
     def execute_algorithm(self, verification=True):
         """
@@ -692,12 +659,13 @@ class HKPCoherence:
             score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
             key, value = next(iter(score_table.items()))
 
-            print(f"Score-table length is {len(score_table)} before suppression of item {key}")
+            print(f"Score-table length is {len(score_table)}, and Suppressed items length is {len(suppressed_items)} "
+                  f"before suppression of item {key}")
 
             # add the item e with the max MM/IL to suppressed items set
             # scoretable is already sorted in dec order of MM/IL
             suppressed_items.add(key)
-            print(f"SUPPRESSED ITEMS LIST: {suppressed_items}")
+            # print(f"SUPPRESSED ITEMS LIST: {suppressed_items}")
 
             # To delete a node from the tree we can set its parent to NONE, so the node and
             # all of its following branches will be disconnected from the rest of the tree
@@ -706,21 +674,13 @@ class HKPCoherence:
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
 
-            print(f"--------###### Node link details for item: {head_link.label} ######--------")
-            temp = head_link
-            while temp is not None:
-                print(f"label: {temp.label}, mole_num: {temp.mole_num}, node_link: {temp.node_link}")
-                temp = temp.node_link
-
             # delete all the subtrees starting from headlink, and following the nodelink
             current_node = head_link
             while current_node is not None:
                 self.delete_subtree(current_node, score_table)
                 current_node = current_node.node_link
 
-            self.print_tree(root)
-            print(f"Items in Score-table: {score_table.keys()}\n"
-                  f"Score-table length: {len(score_table.keys())}")
+            print(f"Score-table length: {len(score_table.keys())}\n")
 
         # after processing all items in the score-table, remove the items tagged as suppressed items from
         # the transactions in order to anonymize
@@ -743,7 +703,7 @@ class HKPCoherence:
             performance_records["time_total"] = int(time.time() - start_time)
             performance_records["distortion"] = distortion
 
-            print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
+            print(f"\n####------ SCORE-TABLE IS EMPTY ------####.\n\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}, Size-1 moles: {len(self.size1_moles)}, "
                   f"Total Suppressed: {len(suppressed_items) + len(self.size1_moles)}\n"
                   f"Original number of public items: {len(self.public_item_list)}\n"
