@@ -100,16 +100,18 @@ class HKPCoherence:
         :return: _item_set, clean_transaction_list
         """
 
-
+        # find size-1 moles within the public items
+        # _item_set is the non-moles
         _item_set, size1_moles = self.get_moles_and_candidates(public_item_set,
                                                                private_item_set,
                                                                transaction_list,
                                                                support_set,
                                                                )
-
+        # record which public items are size-1 moles for later use
         self.size1_moles = size1_moles
         print(f"Non-mole size-1 items count: {len(_item_set)}, items:{_item_set}")
 
+        # remove the size-1 moles from all transactions
         clean_transaction_list = []
         for transaction in transaction_list:
             temp_transaction = list(transaction)
@@ -183,27 +185,32 @@ class HKPCoherence:
             else:
                 _item_set.add(item)
 
-        print(f"\nNon-mole betas len: {len(_item_set)}, betas:{_item_set}")
+        print(f"\nNon-mole betas len: {len(_item_set)}")
 
         return _item_set, minimal_moles
 
-    def find_minimal_moles(self, public_item_set, private_item_set, transaction_list):
+    def find_minimal_moles(self, public_item_set, private_item_set, transaction_list, support_set=None):
         """
         Apriori algorithm like fast solution to find all the minimal moles in the dataset
-        """
 
-        support_set = defaultdict(int)
+        :param public_item_set: The set of public items after size1 moles are removed
+
+        :param private_item_set: Set of private items
+
+        :param transaction_list: List of transactions
+
+        :param support_set: Support(count) record dictionary for all the betas that go into the mole/non-mole
+        determination process
+
+        :return:
+        """
+        # F is the container for the non-moles or extendible moles like they called in the paper
+        # M is the container for the minimal-moles
         F = dict()
         M = dict()
 
-        # public items that non-moles and transaction list cleaned from size-1 moles
-        one_C_set, transaction_list = self.suppress_size1_moles(public_item_set,
-                                                                private_item_set,
-                                                                transaction_list,
-                                                                support_set)
-
         start_time = time.time()
-        current_F_set = one_C_set
+        current_F_set = public_item_set
         # current_M_set = None
         p = 2
 
@@ -215,7 +222,7 @@ class HKPCoherence:
             )
             current_F_set = current_C_set
             M[p] = current_M_set
-            print(f"P: {p}, M length: {len(M[p])}")
+            print(f"P: {p}, minimal_moles len: {len(M[p])}")
             p += 1
 
         minimal_moles = []
@@ -227,29 +234,57 @@ class HKPCoherence:
 
         pass_time = time.time() - start_time
 
-        # TODO: remove items with len(beta) > 1 from support dict we dont need them
+        # pass support records to global variable for later use
         self.support_dict = support_set
         return minimal_moles, pass_time
 
     def anonymization_verifier(self):
+        """
+        Checks if the anonymization process was a success or not.
+        How it works?
+            Get the leftover public items after the suppression, get the clean dataset(all moles removed) and
+            the unchanged set of private items.
+                Then, try to find any moles within the dataset using above as parameters
+        :return:
+        """
+
+        print(f"\n##------------- ANONYMIZATION VERIFIER STARTED -------------## \n")
+        # define a new support record for the verifier
+        support_set = defaultdict(int)
+
         # get the frozen set versions of dataset and the item lists
         # the public items are the unsuppressed ones after the process
         public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
                                                                                                 self.processed_public_items,
                                                                                                 self.private_item_list)
+
+        # check if the public items are size-1 moles first
+        size1_non_moles, size1_moles = self.get_moles_and_candidates(public_item_set,
+                                                                     private_item_set,
+                                                                     transaction_list,
+                                                                     support_set,
+                                                                     )
+
+        # if there are size-1 moles then no need to check the rest
+        if len(size1_moles) != 0:
+            print(f'\n#---- Boo! Anonymization has FAILED ----#\n')
+            return False
+
         # run minimal mole finder
-        min_moles, _ = self.find_minimal_moles(public_item_set, private_item_set, transaction_list)
+        min_moles, _ = self.find_minimal_moles(public_item_set=size1_non_moles,
+                                               private_item_set=private_item_set,
+                                               transaction_list=transaction_list,
+                                               support_set=support_set)
 
         # check all mole levels and count moles if any
-        count = 0
         for p in min_moles:
-            count += len(p)
+            if len(p) != 0:
+                print(f'\n#---- Boo! Anonymization has FAILED ----#\n'
+                      f'Found moles: {p}')
+                return False
 
         # if there are no moles found, then the anonymization is a Success, congrats
-        if count == 0:
-            print(f'\n#---- Congrats! Anonymization has SUCCEEDED ----#\n')
-        else:
-            print(f'\n#---- Boo! Anonymization has FAILED ----#\n')
+        print(f'\n#---- Congrats! Anonymization has SUCCEEDED ----#\n')
 
     @staticmethod
     def all_paths(start_node: Node) -> list:
@@ -361,7 +396,6 @@ class HKPCoherence:
 
         # if head node itself is the node to be deleted
         # change the head node in score table
-        # TODO: if the head_link is the only node left, head_link.node_link might be None, what to do if that is the case
         if temp is not None:
             if temp == link_node:
                 # head_link.node_link points to the next in line node after the heads
@@ -371,7 +405,6 @@ class HKPCoherence:
         # search the link node to be deleted, keep track of the previous node
         # because we need to change the node_link of the node that comes #
         # previous to the node we are looking for
-        # TODO: temp.node_link might be None, take take of it if that is the case
         prev_node = None
         while temp is not link_node:
             prev_node = temp
@@ -614,7 +647,7 @@ class HKPCoherence:
         # lastly remove the node from tree
         node.parent = None
 
-    def execute_algorithm(self, verification=True):
+    def execute_algorithm(self, check_verification=True):
         """
         Run complete anonymization algorithm
         :return:
@@ -634,10 +667,21 @@ class HKPCoherence:
         public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
                                                                                                 self.public_item_list,
                                                                                                 self.private_item_list)
+        #
+        support_set = defaultdict(int)
+
+        # public items that are non-moles and transaction list cleaned from size-1 moles
+        size1_non_moles, transaction_list = self.suppress_size1_moles(public_item_set,
+                                                                      private_item_set,
+                                                                      transaction_list,
+                                                                      support_set)
 
         # find minimal moles M* from D
         # get time pass as a return value, ugly but OK for the moment, TODO:change later
-        self.moles, pass_time = self.find_minimal_moles(public_item_set, private_item_set, transaction_list)
+        self.moles, pass_time = self.find_minimal_moles(public_item_set=size1_non_moles,
+                                                        private_item_set=private_item_set,
+                                                        transaction_list=transaction_list,
+                                                        support_set=support_set)
         performance_records["time_find_min_moles"] = int(pass_time)
 
         # Build the mole tree
@@ -665,12 +709,10 @@ class HKPCoherence:
             # add the item e with the max MM/IL to suppressed items set
             # scoretable is already sorted in dec order of MM/IL
             suppressed_items.add(key)
-            # print(f"SUPPRESSED ITEMS LIST: {suppressed_items}")
 
             # To delete a node from the tree we can set its parent to NONE, so the node and
             # all of its following branches will be disconnected from the rest of the tree
 
-            # FIXME: Headlink was None, in one occasion, find out what is wrong
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
 
@@ -703,29 +745,39 @@ class HKPCoherence:
             performance_records["time_total"] = int(time.time() - start_time)
             performance_records["distortion"] = distortion
 
-            print(f"\n####------ SCORE-TABLE IS EMPTY ------####.\n\nSuppressed items: {suppressed_items}\n"
+            print(f"\n####------ SCORE-TABLE IS EMPTY, FINISHED ANONYMIZING ------####.\n"
+                  f"\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}, Size-1 moles: {len(self.size1_moles)}, "
                   f"Total Suppressed: {len(suppressed_items) + len(self.size1_moles)}\n"
                   f"Original number of public items: {len(self.public_item_list)}\n"
                   f"Public items after suppression, len:{len(self.processed_public_items)}, "
                   f"{self.processed_public_items}\n")
 
-            # Write performance records to csv file for later use
-            # Open the file in "append" mode
-            output_path = "./Plots/performance_records.csv"
-            df_performance = pd.DataFrame([performance_records])
-            df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
+            # start the anonymization verifier
+            is_verified = True
+            if check_verification:
+                is_verified = self.anonymization_verifier()
 
-            print(f"\nH: {self.h}, K: {self.k}, P:{self.p}, SIGMA: {self.sigma}\n"
-                  f"DISTORTION: {distortion}, TOTAL TIME: {performance_records['time_total']}, "
-                  f"TIME FIND MIN-MOLES: {performance_records['time_find_min_moles']}\n")
+            # if the data is successfully anonymized then record pereformance metrics and the anonymized version
+            # of the data
+            if is_verified:
+                # Write performance records to csv file for later use
+                # Open the file in "append" mode
+                output_path = "./Plots/performance_records.csv"
+                df_performance = pd.DataFrame([performance_records])
+                df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
 
-            print("\nPreparing the anonymized file")
-            with open(r'Dataset/Anonymized/anonymized.txt', 'w') as f:
-                for t in self.dataset:
-                    transaction = ' '.join(map(str, t))
-                    f.write(f"{transaction}\n")
-                print('Done')
+                print(f"\nH: {self.h}, K: {self.k}, P:{self.p}, SIGMA: {self.sigma}\n"
+                      f"DISTORTION: {distortion}, TOTAL TIME: {performance_records['time_total']}, "
+                      f"TIME FIND MIN-MOLES: {performance_records['time_find_min_moles']}\n")
 
-        if verification is True:
-            self.anonymization_verifier()
+                print("\nPreparing the anonymized file")
+                with open(r'Dataset/Anonymized/anonymized.txt', 'w') as f:
+                    for t in self.dataset:
+                        transaction = ' '.join(map(str, t))
+                        f.write(f"{transaction}\n")
+                    print('Done')
+
+
+
+

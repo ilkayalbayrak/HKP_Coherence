@@ -26,4 +26,4 @@ if __name__ == "__main__":
     hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h=H, k=K, p=P, sigma=SIGMA)
 
     # start the anonymization process
-    hkp.execute_algorithm(verification=True)
+    hkp.execute_algorithm(check_verification=True)
