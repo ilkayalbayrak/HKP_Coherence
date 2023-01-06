@@ -109,7 +109,7 @@ class HKPCoherence:
                                                                )
         # record which public items are size-1 moles for later use
         self.size1_moles = size1_moles
-        print(f"Non-mole size-1 items count: {len(_item_set)}, items:{_item_set}")
+        print(f"Non-mole size-1 items count: {len(_item_set)}")
 
         # remove the size-1 moles from all transactions
         clean_transaction_list = []
@@ -492,7 +492,7 @@ class HKPCoherence:
                             score_table[item]["head_of_link"] = node
                             nodes.append(node)
                         else:
-                            # every item that comes after the first one should be the child of the following item
+                            # every item that comes after the first one should be the child of previous item
                             node = Node(label=item,
                                         mole_num=0,
                                         node_link=None,
@@ -505,7 +505,7 @@ class HKPCoherence:
                     else:
 
                         if index == 0:
-
+                            # find the first item by checking the children nodes of the root
                             if item in [child.label for child in root.children]:
 
                                 node = [child for child in root.children if item == child.label][0]
@@ -514,7 +514,10 @@ class HKPCoherence:
                                 nodes.append(node)
 
                             else:
-
+                                # if item is the first item of the mole, not a child to the root and registered to
+                                # score-table, then it means it was previusly registered as a child of another item
+                                # in a previous mole
+                                # so make a new node for it and make it a child of root
                                 node = Node(label=item,
                                             mole_num=0,
                                             node_link=None,
