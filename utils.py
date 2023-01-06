@@ -125,3 +125,23 @@ def prepare_data(data_path, sigma):
             dataset.append([int(i) for i in set(line.rstrip().split())])
 
     return dataset, public_items, private_items
+
+def node_link_length(head_link):
+    """
+    Finds the length of a node_link
+
+    :param head_link: Head node of the node_link
+    :return:
+    """
+    temp = head_link  # Initialise temp
+    count = 0  # Initialise count
+
+    if not head_link:
+        return count
+
+    else:
+        # Loop while end of linked list is not reached
+        while temp:
+            count += 1
+            temp = temp.node_link
+        return count

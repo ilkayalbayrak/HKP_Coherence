@@ -34,7 +34,7 @@ class HKPCoherence:
         :param dataset: The list of transactions
         :param public_item_list: Public items of the dataset
         :param private_item_list: Private items of the dataset
-        :param h: The percentage of the transactions in beta-cohort that contain a common private item
+        :param h: The max percentage of the transactions in beta-cohort that contain a common private item
         :param k: The least number of transactions that should be contained in the beta-cohort
         :param p: The maximum number of public items that can be obtained as prior knowledge in a single attack
         :param sigma: the percentage of public items wrt all items in the dataset
@@ -48,13 +48,13 @@ class HKPCoherence:
         self.p = p
         self.sigma = sigma
         self.transactions = list()
-        self.size1_moles = list()
-        self.support_dict = None
-        self.moles = None
-        self.MM = dict()
-        self.score_table = None
-        self.mole_tree_root = None
-        self.suppressed_items = None
+        self.size1_moles = list()  # list of size-1 moles
+        self.support_dict = None  # Support/count records of all betas(sets of public items)
+        self.moles = None  # list of minimal moles found in the dataset
+        self.MM = dict()  # dict for recording how many min moles contain a public item
+        self.score_table = None  # details for each public item found in a minimal mole. Crucial for suppression
+        self.mole_tree_root = None  # Tree version of the minimal moles we found in dataset
+        self.suppressed_items = None  # list of suppressed public items
         self.processed_public_items = None  # public items after suppression
         self.total_occurrence_count = 0  # sum of all item occurrences in dataset
         self.suppressed_item_occurrence_count = 0  # supp item occurrence count
@@ -202,7 +202,7 @@ class HKPCoherence:
         :param support_set: Support(count) record dictionary for all the betas that go into the mole/non-mole
         determination process
 
-        :return:
+        :return: list of minimal moles and runtime for find_minimal_moles()
         """
         # F is the container for the non-moles or extendible moles like they called in the paper
         # M is the container for the minimal-moles
@@ -211,9 +211,7 @@ class HKPCoherence:
 
         start_time = time.time()
         current_F_set = public_item_set
-        # current_M_set = None
         p = 2
-
         while p <= self.p and current_F_set != set([]):
             F[p - 1] = current_F_set
             current_F_set = self.join_set(current_F_set, p)
@@ -276,7 +274,7 @@ class HKPCoherence:
                                                transaction_list=transaction_list,
                                                support_set=support_set)
 
-        # check all mole levels and count moles if any
+        # check all mole levels, if there are any moles anonymization failed
         for p in min_moles:
             if len(p) != 0:
                 print(f'\n#---- Boo! Anonymization has FAILED ----#\n'
@@ -572,32 +570,12 @@ class HKPCoherence:
             treestr = u"%s%s:%s" % (pre, node.label, node.mole_num)
             print(treestr.ljust(8))
 
-    @staticmethod
-    def node_link_length(head_link):
-        """
-        Finds the length of a node_link
-
-        :param head_link: Head node of the node_link
-        :return:
-        """
-        temp = head_link  # Initialise temp
-        count = 0  # Initialise count
-
-        if not head_link:
-            return count
-
-        else:
-            # Loop while end of linked list is not reached
-            while temp:
-                count += 1
-                temp = temp.node_link
-            return count
 
     def delete_subtree(self, node: Node, score_table: dict):
         """
-        Function to delete subtree
+        Function to delete subtree or tree branch that starts from a given node
 
-        :param node:
+        :param node: Starting node of the mole-tree branch that will be deleted
         :param score_table:
         :return:
         """
@@ -661,7 +639,6 @@ class HKPCoherence:
                                "time_find_min_moles": 0,
                                "time_total": 0}
 
-        start_time = time.time()
 
         # get the frozen set versions of dataset and the public items
         public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
@@ -675,6 +652,8 @@ class HKPCoherence:
                                                                       private_item_set,
                                                                       transaction_list,
                                                                       support_set)
+        # start the timer for measuring the total runtime
+        start_time = time.time()
 
         # find minimal moles M* from D
         # get time pass as a return value, ugly but OK for the moment, TODO:change later
@@ -687,11 +666,14 @@ class HKPCoherence:
         # Build the mole tree
         self.build_mole_tree()
 
+
         # initiate suppressed items set
         suppressed_items = set()
 
         score_table = self.score_table
         root = self.mole_tree_root
+
+        # self.print_tree(root)
 
         # check if MM values in score table equal total mole_num count
         utils.check_MM_equal_mole_num(root, score_table)
@@ -732,6 +714,8 @@ class HKPCoherence:
             self.processed_public_items = [i for i in self.public_item_list if
                                            i not in suppressed_items and frozenset([i]) not in self.size1_moles]
 
+            # calculate sum occurrence for all the items that are suppressed
+            # needed for calculating distortion
             for item in self.suppressed_items:
                 self.suppressed_item_occurrence_count += self.support_dict[frozenset([item])]
 
