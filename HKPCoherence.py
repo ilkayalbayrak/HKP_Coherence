@@ -283,6 +283,7 @@ class HKPCoherence:
 
         # if there are no moles found, then the anonymization is a Success, congrats
         print(f'\n#---- Congrats! Anonymization has SUCCEEDED ----#\n')
+        return True
 
     @staticmethod
     def all_paths(start_node: Node) -> list:
