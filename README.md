@@ -23,12 +23,12 @@ To set values by hand, below is the usage:
 
 Example with default values:
 ```shell
-python run_hkp.py --h-val 0.4 --k-val 10 --p-val 4 --sigma 0.15 --data-path Dataset/T40I10D100K_1000.txt 
+python run_hkp.py --h-value 0.4 --k-value 10 --p-value 4 --sigma 0.15 --data-path Dataset/T40_1000.txt 
 ```
 #### Parameters explanation
-* `--h-val`, the max percentage of the transactions in beta-cohort that contain a common private item.
-* `--k-val`, the least number of transactions that should be contained in the beta-cohort.
-* `--p-val`, the maximum number of public items that can be obtained as prior knowledge in a single attack.
+* `--h-value`, the max percentage of the transactions in beta-cohort that contain a common private item.
+* `--k-value`, the least number of transactions that should be contained in the beta-cohort.
+* `--p-value`, the maximum number of public items that can be obtained as prior knowledge in a single attack.
 * `--sigma`, the percentage of public items that dataset contains.
 * `--data-path`, path to dataset
 * `--no-verification`, pass this if no need for anonymization verifier to run. Otherwise, verifier always runs after anonymization process. 

@@ -28,9 +28,9 @@ def percentage(s: str) -> float:
 
 
 def main(args):
-    h = args.h_val
-    k = args.k_val
-    p = args.p_val
+    h = args.h_value
+    k = args.k_value
+    p = args.p_value
     sigma = args.sigma
     data_path = args.data_path
     verification_flag = args.no_verification
@@ -45,39 +45,35 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Runs (h,k,p)-coherence algorithm')
+    parser = argparse.ArgumentParser(description='Runs (h,k,p)-coherence algorithm',
+                                     formatter_class=argparse.RawDescriptionHelpFormatter)
 
-    parser.add_argument('--h-val',
-                        metavar='float value in range 0,1',
+    parser.add_argument('-hv', '--h-value',
                         type=percentage,
                         default=0.4,
                         help='(0,1) percentage value. (default: %(default)s)')
 
-    parser.add_argument('--k-val',
-                        metavar='positive integer',
+    parser.add_argument('-k', '--k-value',
                         type=positive_int,
                         default=10,
                         help='enter the value of k, positive integer. (default: %(default)s)',
                         )
 
-    parser.add_argument('--p-val',
-                        metavar='positive integer',
+    parser.add_argument('-p', '--p-value',
                         type=positive_int,
                         default=4,
                         help='enter the value of p, positive integer. (default: %(default)s)'
                         )
 
-    parser.add_argument('--sigma',
-                        metavar='float value in range 0,1',
+    parser.add_argument('-s', '--sigma',
                         type=percentage,
                         default=0.15,
                         help='(0,1) percentage value. (default: %(default)s)'
                         )
 
-    parser.add_argument('--data-path',
-                        metavar='filepath',
+    parser.add_argument('-d', '--data-path',
                         type=str,
-                        default='Dataset/T40I10D100K_1000.txt',
+                        default='Dataset/T40_1000.txt',
                         help='enter the path of the dataset. (default: %(default)s)'
                         )
 
