@@ -12,7 +12,7 @@ The dataset is accessible in the <i>Dataset</i> folder.
 
 <h2>Validation of the anonymization</h2>
 Validation tool is built-in to the HKPCoherence class. 
-#### How it works? 
+### How it works? 
 When anonymization process finishes, the validation function is called by default.
 It uses the `unsuppressed public items` and `clean dataset`, where all public items that cause vulnerability are
 removed, as parameters. Then, tries to find if there are any public items that still
@@ -21,8 +21,7 @@ cause vulnerability.
 
 
 <h2>Usage</h2>
-All the arguments have default values, so just issuing ***python run_hkp.py*** will be enough to run.
-
+All the arguments have default values, so just issuing `python run_hkp.py` will be enough to run.
 
 To set values by hand, below is the usage:
 ```shell

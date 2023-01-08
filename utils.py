@@ -66,7 +66,7 @@ def distortion_p(data_path, h, k, p_list, sigma):
         hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h, k, p=p, sigma=sigma)
 
         # start the anonymization process
-        hkp.execute_algorithm()
+        hkp.execute_algorithm(check_verification=True)
 
 
 def distortion_sigma(data_path, sigma_list, h, k, p):
@@ -81,7 +81,7 @@ def distortion_sigma(data_path, sigma_list, h, k, p):
         hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h, k, p, sigma=sigma)
 
         # start the anonymization process
-        hkp.execute_algorithm()
+        hkp.execute_algorithm(check_verification=True)
 
 
 def distortion_k(data_path, h, k_list, p, sigma):
@@ -94,12 +94,12 @@ def distortion_k(data_path, h, k_list, p, sigma):
         hkp = HKPCoherence.HKPCoherence(dataset, public_items, private_items, h, k=k, p=p, sigma=sigma)
 
         # start the anonymization process
-        hkp.execute_algorithm()
+        hkp.execute_algorithm(check_verification=True)
 
 
 def prepare_data(data_path, sigma):
     # set a random seed
-    # np.random.seed(42)
+    np.random.seed(1)
 
     # make a list of all items that can be found the dataset
     unique_items = find_unique_items(data_path)
@@ -115,8 +115,8 @@ def prepare_data(data_path, sigma):
     # determine the private items
     private_items = [i for i in unique_items if i not in public_items]
 
-    print(f"Private items: {private_items}\nPrivate len: {len(private_items)}\n\n"
-          f"Public items: {public_items}\nPublic len: {len(public_items)}")
+    print(f"Sigma: {sigma*100}%\nPrivate items count: {len(private_items)}\n"
+          f"Public items count: {len(public_items)}\n\nPublic items list: {public_items}")
 
     # read all the data from the text file
     dataset = []

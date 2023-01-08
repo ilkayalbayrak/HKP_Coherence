@@ -100,6 +100,8 @@ class HKPCoherence:
         :return: _item_set, clean_transaction_list
         """
 
+        print(f"\n##------------- SUPPRESS SIZE-1 MOLES STARTED -------------## \n")
+
         # find size-1 moles within the public items
         # _item_set is the non-moles
         _item_set, size1_moles = self.get_moles_and_candidates(public_item_set,
@@ -204,6 +206,9 @@ class HKPCoherence:
 
         :return: list of minimal moles and runtime for find_minimal_moles()
         """
+
+        print(f"\n##------------- FIND MINIMAL MOLES STARTED -------------## \n")
+
         # F is the container for the non-moles or extendible moles like they called in the paper
         # M is the container for the minimal-moles
         F = dict()
@@ -250,6 +255,8 @@ class HKPCoherence:
         # define a new support record for the verifier
         support_set = defaultdict(int)
 
+        print(f'Public items: {self.processed_public_items}')
+
         # get the frozen set versions of dataset and the item lists
         # the public items are the unsuppressed ones after the process
         public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
@@ -267,6 +274,8 @@ class HKPCoherence:
         if len(size1_moles) != 0:
             print(f'\n#---- Boo! Anonymization has FAILED ----#\n')
             return False
+        else:
+            print(f'P: 1, minimal_moles len: {len(size1_moles)}')
 
         # run minimal mole finder
         min_moles, _ = self.find_minimal_moles(public_item_set=size1_non_moles,
@@ -282,7 +291,7 @@ class HKPCoherence:
                 return False
 
         # if there are no moles found, then the anonymization is a Success, congrats
-        print(f'\n#---- Congrats! Anonymization has SUCCEEDED ----#\n')
+        print(f'\n#---- Congrats! No moles was found, anonymization has SUCCEEDED ----#\n')
         return True
 
     @staticmethod
@@ -574,7 +583,6 @@ class HKPCoherence:
             treestr = u"%s%s:%s" % (pre, node.label, node.mole_num)
             print(treestr.ljust(8))
 
-
     def delete_subtree(self, node: Node, score_table: dict):
         """
         Function to delete subtree or tree branch that starts from a given node
@@ -643,7 +651,6 @@ class HKPCoherence:
                                "time_find_min_moles": 0,
                                "time_total": 0}
 
-
         # get the frozen set versions of dataset and the public items
         public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
                                                                                                 self.public_item_list,
@@ -670,7 +677,6 @@ class HKPCoherence:
         # Build the mole tree
         self.build_mole_tree()
 
-
         # initiate suppressed items set
         suppressed_items = set()
 
@@ -682,6 +688,7 @@ class HKPCoherence:
         # check if MM values in score table equal total mole_num count
         utils.check_MM_equal_mole_num(root, score_table)
 
+        print(f"\n##------------- MINIMAL MOLE SUPPRESSION STARTED -------------## \n")
         # process all items
         while score_table:
 
@@ -760,12 +767,9 @@ class HKPCoherence:
                       f"TIME FIND MIN-MOLES: {performance_records['time_find_min_moles']}\n")
 
                 print("\nPreparing the anonymized file")
-                with open(r'Dataset/Anonymized/anonymized.txt', 'w') as f:
+                anon_output_file = f'Dataset/Anonymized/T40_{len(self.dataset)}_anon.txt'
+                with open(anon_output_file, 'w') as f:
                     for t in self.dataset:
                         transaction = ' '.join(map(str, t))
                         f.write(f"{transaction}\n")
                     print('Done')
-
-
-
-
