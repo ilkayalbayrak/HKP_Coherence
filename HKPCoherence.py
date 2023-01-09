@@ -758,7 +758,7 @@ class HKPCoherence:
             if is_verified:
                 # Write performance records to csv file for later use
                 # Open the file in "append" mode
-                output_path = "Plots/performance_records_no_random_seed.csv"
+                output_path = "Results/performance_records_no_random_seed.csv"
                 df_performance = pd.DataFrame([performance_records])
                 df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
 
