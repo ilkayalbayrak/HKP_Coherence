@@ -21,6 +21,7 @@ cause vulnerability.
 
 
 <h2>Usage</h2>
+
 All the arguments have default values, so just issuing `python run_hkp.py` will be enough to run.
 
 To set values by hand, below is the usage:
@@ -39,3 +40,9 @@ python run_hkp.py --h-value 0.4 --k-value 10 --p-value 4 --sigma 0.15 --data-pat
 * `--sigma`, the percentage of public items that dataset contains.
 * `--data-path`, path to dataset
 * `--no-verification`, pass this if no need for anonymization verifier to run. Otherwise, verifier always runs after anonymization process. 
+
+
+
+<h2>License</h2>
+
+This project is licensed under the MIT License - see the <a href="https://github.com/ilkayalbayrak/HKP_Coherence/blob/master/LICENSE.md">LICENSE.md</a> file for details.
