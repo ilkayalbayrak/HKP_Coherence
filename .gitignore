@@ -10,6 +10,7 @@ scratch3.py
 scratchv2.py
 scratch4.py
 process_data.ipynb
+draw_performance_plots.ipynb
 
 notes.txt
 __pycache__
