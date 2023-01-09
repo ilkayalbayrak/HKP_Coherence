@@ -12,7 +12,7 @@ The dataset is accessible in the <i>Dataset</i> folder.
 
 <h2>Validation of the anonymization</h2>
 Validation tool is built-in to the HKPCoherence class. 
-### How it works? 
+<h3><b>How it works?</b></h3> 
 When anonymization process finishes, the validation function is called by default.
 It uses the `unsuppressed public items` and `clean dataset`, where all public items that cause vulnerability are
 removed, as parameters. Then, tries to find if there are any public items that still
