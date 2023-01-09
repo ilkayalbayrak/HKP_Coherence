@@ -34,11 +34,11 @@ Example with default values:
 python run_hkp.py --h-value 0.4 --k-value 10 --p-value 4 --sigma 0.15 --data-path Dataset/T40_1000.txt 
 ```
 #### Parameters explanation
-_beta_ is any subset (max size-p) of public items, _beta-cohort_ is the transactions that contain _beta_ as a subset.
-* `--h-value`, the max percentage of the transactions in beta-cohort that contain a common private item.
-* `--k-value`, the least number of transactions that should be contained in the beta-cohort.
-* `--p-value`, the maximum number of public items that can be obtained as prior knowledge in a single attack.
-* `--sigma`, the percentage of public items that dataset contains.
+_beta_ is any subset (max size-p) of public items.
+* `--h-value`, the probability of linking an individual to a private item.
+* `--k-value`, the least number of transactions that should contain _beta_ as a subset.
+* `--p-value`, the maximum number of public items that can be obtained as prior knowledge by the attacker.
+* `--sigma`, the percentage of public items that dataset contains (Public items are randomly selected).
 * `--data-path`, path to dataset
 * `--no-verification`, pass this if no need for anonymization verifier to run. Otherwise, verifier always runs after anonymization process. 
 
