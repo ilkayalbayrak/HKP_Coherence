@@ -4,17 +4,7 @@ import pandas as pd
 import utils
 
 from anytree import NodeMixin, RenderTree, search, PreOrderIter
-from itertools import chain, combinations
 from collections import defaultdict
-
-'''
-    #######- GREEDY ALGORITHM -#######
-    A public item must be suppressed, if the item on ITS OWN IS A MOLE.
-        If a public item is a (size-1) mole, the item will
-        not occur in any (h,k,p)-cohesion of D, thus, can be suppressed in
-        a preprocessing step
-
-'''
 
 
 class Node(NodeMixin):
@@ -36,15 +26,6 @@ class Node(NodeMixin):
             self.children = children
 
 
-# # this can be an inner class of hkp coherence
-# class Transaction:
-#     # tag the private and pub items of each transaction in data
-#     def __init__(self, ID: int, public: list, private: list):
-#         self.ID = ID
-#         self.public = public
-#         self.private = private
-
-
 class HKPCoherence:
     def __init__(self, dataset: list, public_item_list: list, private_item_list: list, h: float, k: int, p: int,
                  sigma: float):
@@ -53,7 +34,7 @@ class HKPCoherence:
         :param dataset: The list of transactions
         :param public_item_list: Public items of the dataset
         :param private_item_list: Private items of the dataset
-        :param h: The percentage of the transactions in beta-cohort that contain a common private item
+        :param h: The max percentage of the transactions in beta-cohort that contain a common private item
         :param k: The least number of transactions that should be contained in the beta-cohort
         :param p: The maximum number of public items that can be obtained as prior knowledge in a single attack
         :param sigma: the percentage of public items wrt all items in the dataset
@@ -67,13 +48,13 @@ class HKPCoherence:
         self.p = p
         self.sigma = sigma
         self.transactions = list()
-        self.size1_moles = list()
-        self.support_dict = None
-        self.moles = None
-        self.MM = dict()
-        self.score_table = None
-        self.mole_tree_root = None
-        self.suppressed_items = None
+        self.size1_moles = list()  # list of size-1 moles
+        self.support_dict = None  # Support/count records of all betas(sets of public items)
+        self.moles = None  # list of minimal moles found in the dataset
+        self.MM = dict()  # dict for recording how many min moles contain a public item
+        self.score_table = None  # details for each public item found in a minimal mole. Crucial for suppression
+        self.mole_tree_root = None  # Tree version of the minimal moles we found in dataset
+        self.suppressed_items = None  # list of suppressed public items
         self.processed_public_items = None  # public items after suppression
         self.total_occurrence_count = 0  # sum of all item occurrences in dataset
         self.suppressed_item_occurrence_count = 0  # supp item occurrence count
@@ -118,20 +99,21 @@ class HKPCoherence:
         :param support_set: Support dictionary of all betas
         :return: _item_set, clean_transaction_list
         """
-        # public?
-        """
-        how do we count sup for beta and beta->e in one go
-        """
 
+        print(f"\n##------------- SUPPRESS SIZE-1 MOLES STARTED -------------## \n")
+
+        # find size-1 moles within the public items
+        # _item_set is the non-moles
         _item_set, size1_moles = self.get_moles_and_candidates(public_item_set,
                                                                private_item_set,
                                                                transaction_list,
                                                                support_set,
                                                                )
-
+        # record which public items are size-1 moles for later use
         self.size1_moles = size1_moles
-        print(f"Non-mole size-1 items len: {len(_item_set)}, items:{_item_set}")
+        print(f"Non-mole size-1 items count: {len(_item_set)}")
 
+        # remove the size-1 moles from all transactions
         clean_transaction_list = []
         for transaction in transaction_list:
             temp_transaction = list(transaction)
@@ -176,10 +158,6 @@ class HKPCoherence:
         # create sets of beta->e for counting support for breach probability of beta
         for beta in item_set:
             p_breach_dict[beta] = defaultdict(int)
-        #     for e in private_item_set:
-        #         beta_e = beta.copy()
-        #         beta_e = beta_e.union(e)
-        #         p_breach_dict[beta][beta_e] = 0
 
         # calculate support for beta and beta->e
         for transaction in transaction_list:
@@ -209,30 +187,36 @@ class HKPCoherence:
             else:
                 _item_set.add(item)
 
-        print(f"\nNon-mole betas len: {len(_item_set)}, betas:{_item_set}")
+        print(f"\nNon-mole betas len: {len(_item_set)}")
 
         return _item_set, minimal_moles
 
-    def find_minimal_moles(self, public_item_set, private_item_set, transaction_list):
+    def find_minimal_moles(self, public_item_set, private_item_set, transaction_list, support_set=None):
         """
         Apriori algorithm like fast solution to find all the minimal moles in the dataset
+
+        :param public_item_set: The set of public items after size1 moles are removed
+
+        :param private_item_set: Set of private items
+
+        :param transaction_list: List of transactions
+
+        :param support_set: Support(count) record dictionary for all the betas that go into the mole/non-mole
+        determination process
+
+        :return: list of minimal moles and runtime for find_minimal_moles()
         """
 
-        support_set = defaultdict(int)
+        print(f"\n##------------- FIND MINIMAL MOLES STARTED -------------## \n")
+
+        # F is the container for the non-moles or extendible moles like they called in the paper
+        # M is the container for the minimal-moles
         F = dict()
         M = dict()
 
-        # public items that non-moles and transaction list cleaned from size-1 moles
-        one_C_set, transaction_list = self.suppress_size1_moles(public_item_set,
-                                                                private_item_set,
-                                                                transaction_list,
-                                                                support_set)
-
         start_time = time.time()
-        current_F_set = one_C_set
-        # current_M_set = None
+        current_F_set = public_item_set
         p = 2
-
         while p <= self.p and current_F_set != set([]):
             F[p - 1] = current_F_set
             current_F_set = self.join_set(current_F_set, p)
@@ -241,7 +225,7 @@ class HKPCoherence:
             )
             current_F_set = current_C_set
             M[p] = current_M_set
-            print(f"P: {p}, M length: {len(M[p])}")
+            print(f"P: {p}, minimal_moles len: {len(M[p])}")
             p += 1
 
         minimal_moles = []
@@ -253,33 +237,62 @@ class HKPCoherence:
 
         pass_time = time.time() - start_time
 
-        print(f"Min-moles: {minimal_moles}")
-        for mole_level in minimal_moles:
-            print(mole_level)
-
-        # TODO: remove items with len(beta) > 1 from support dict we dont need them
+        # pass support records to global variable for later use
         self.support_dict = support_set
         return minimal_moles, pass_time
 
     def anonymization_verifier(self):
+        """
+        Checks if the anonymization process was a success or not.
+        How it works?
+            Get the leftover public items after the suppression, get the clean dataset(all moles removed) and
+            the unchanged set of private items.
+                Then, try to find any moles within the dataset using above as parameters
+        :return:
+        """
+
+        print(f"\n##------------- ANONYMIZATION VERIFIER STARTED -------------## \n")
+        # define a new support record for the verifier
+        support_set = defaultdict(int)
+
+        print(f'Public items: {self.processed_public_items}')
+
         # get the frozen set versions of dataset and the item lists
         # the public items are the unsuppressed ones after the process
         public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
                                                                                                 self.processed_public_items,
                                                                                                 self.private_item_list)
-        # run minimal mole finder
-        min_moles, _ = self.find_minimal_moles(public_item_set, private_item_set, transaction_list)
 
-        # check all mole levels and count moles, if any
-        count = 0
+        # check if the public items are size-1 moles first
+        size1_non_moles, size1_moles = self.get_moles_and_candidates(public_item_set,
+                                                                     private_item_set,
+                                                                     transaction_list,
+                                                                     support_set,
+                                                                     )
+
+        # if there are size-1 moles then no need to check the rest
+        if len(size1_moles) != 0:
+            print(f'\n#---- Boo! Anonymization has FAILED ----#\n')
+            return False
+        else:
+            print(f'P: 1, minimal_moles len: {len(size1_moles)}')
+
+        # run minimal mole finder
+        min_moles, _ = self.find_minimal_moles(public_item_set=size1_non_moles,
+                                               private_item_set=private_item_set,
+                                               transaction_list=transaction_list,
+                                               support_set=support_set)
+
+        # check all mole levels, if there are any moles anonymization failed
         for p in min_moles:
-            count += len(p)
+            if len(p) != 0:
+                print(f'\n#---- Boo! Anonymization has FAILED ----#\n'
+                      f'Found moles: {p}')
+                return False
 
         # if there are no moles found, then the anonymization is a Success, congrats
-        if count == 0:
-            print(f'\n#---- Congrats! Anonymization has SUCCEEDED ----#\n')
-        else:
-            print(f'\n#---- Boo! Anonymization has FAILED ----#\n')
+        print(f'\n#---- Congrats! No moles was found, anonymization has SUCCEEDED ----#\n')
+        return True
 
     @staticmethod
     def all_paths(start_node: Node) -> list:
@@ -356,7 +369,6 @@ class HKPCoherence:
         # store MM value for each public item e
         self.MM = items_mm_count
 
-        print(f"\nOrdered moles: {ordered_moles}\n")
         return ordered_moles
 
     def info_loss(self, e):
@@ -392,7 +404,6 @@ class HKPCoherence:
 
         # if head node itself is the node to be deleted
         # change the head node in score table
-        # TODO: if the head_link is the only node left, head_link.node_link might be None, what to do if that is the case
         if temp is not None:
             if temp == link_node:
                 # head_link.node_link points to the next in line node after the heads
@@ -402,7 +413,6 @@ class HKPCoherence:
         # search the link node to be deleted, keep track of the previous node
         # because we need to change the node_link of the node that comes #
         # previous to the node we are looking for
-        # TODO: temp.node_link might be None, take take of it if that is the case
         prev_node = None
         while temp is not link_node:
             prev_node = temp
@@ -491,7 +501,7 @@ class HKPCoherence:
                             score_table[item]["head_of_link"] = node
                             nodes.append(node)
                         else:
-                            # every item that comes after the first one should be the child of the following item
+                            # every item that comes after the first one should be the child of previous item
                             node = Node(label=item,
                                         mole_num=0,
                                         node_link=None,
@@ -504,7 +514,7 @@ class HKPCoherence:
                     else:
 
                         if index == 0:
-
+                            # find the first item by checking the children nodes of the root
                             if item in [child.label for child in root.children]:
 
                                 node = [child for child in root.children if item == child.label][0]
@@ -513,7 +523,10 @@ class HKPCoherence:
                                 nodes.append(node)
 
                             else:
-
+                                # if item is the first item of the mole, not a child to the root and registered to
+                                # score-table, then it means it was previusly registered as a child of another item
+                                # in a previous mole
+                                # so make a new node for it and make it a child of root
                                 node = Node(label=item,
                                             mole_num=0,
                                             node_link=None,
@@ -565,79 +578,42 @@ class HKPCoherence:
         :param start_node:
         :return:
         """
-        print(f"\nTree Starting from Node: {start_node.label}")
+
         for pre, _, node in RenderTree(start_node):
             treestr = u"%s%s:%s" % (pre, node.label, node.mole_num)
             print(treestr.ljust(8))
 
-    @staticmethod
-    def node_link_length(head_link):
-        """
-        Finds the length of a node_link
-
-        :param head_link: Head node of the node_link
-        :return:
-        """
-        temp = head_link  # Initialise temp
-        count = 0  # Initialise count
-
-        if not head_link:
-            return count
-
-        else:
-            # Loop while end of linked list is not reached
-            while temp:
-                count += 1
-                temp = temp.node_link
-            return count
-
     def delete_subtree(self, node: Node, score_table: dict):
         """
-        Function to delete subtree
+        Function to delete subtree or tree branch that starts from a given node
 
-        :param node:
+        :param node: Starting node of the mole-tree branch that will be deleted
         :param score_table:
         :return:
         """
         assert node.label in score_table.keys(), f"node: {node.label} was not in the score-table"
 
-        print(f"\n---- Delete Subtree ----\n"
-              f"node: {node.label}, mole_num: {node.mole_num}, node_link_len: {self.node_link_length(node)}, "
-              f"MM: {score_table[node.label]['MM']}, "
-              f"head_link: {'TRUE' if score_table[node.label]['head_of_link'] == node else 'FALSE'}")
-
         # delete all the minimal moles at the subtree node
-        print("----# Subtree iter #----")
         for w in PreOrderIter(node):
-
-            print(f"label: {w.label}, mole_num: {w.mole_num}, MM: {score_table[w.label]['MM']}")
 
             # decrease w.MM by w.mole_num
             score_table[w.label]["MM"] -= w.mole_num
             assert score_table[w.label]["MM"] >= 0, f"label: {w.label}, mole_num: {w.mole_num}, " \
                                                     f"MM: {score_table[w.label]['MM']}"
 
-            # FIXME: the root of the errors might be heres
             # remove the processed nodes from their respective node_links
-            # if w is not node:
-            #     self.delete_node_link(link_node=w,
-            #                           score_table=score_table)
             self.delete_node_link(link_node=w,
                                   score_table=score_table)
             # if MM == 0, then remove the item from the score-table
             if score_table[w.label]["MM"] == 0:
-                print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
-                      f"thus it will be removed from the score-table")
                 del score_table[w.label]
 
-        print("----# Ancestors of node iter #----")
         # find all the ancestors of the node
         ancestors = [ancestor for ancestor in node.ancestors]
-        print(f"node.ancestors: {[node.label for node in ancestors]}")
         for w in ancestors:
             # Do not count the root node as an ancestor
             if not w.is_root:
-                print(f"label: {w.label}, mole_num: {w.mole_num}")
+
                 # decrement w.mole_num and w.MM by node.mole_num
                 w.mole_num -= node.mole_num
                 score_table[w.label]["MM"] -= node.mole_num
@@ -648,7 +624,6 @@ class HKPCoherence:
 
                 # if mole_num hits 0, then cut node w from the tree
                 if w.mole_num == 0:
-                    print(f"label: {w.label}, mole_num has become 0, thus it will be removed from the tree")
                     w.parent = None
 
                     # if mole_num is 0 remove from the node link
@@ -657,15 +632,12 @@ class HKPCoherence:
                                           score_table=score_table)
                 # if MM of w hits 0 in score-table, remove w from the score-table
                 if score_table[w.label]["MM"] == 0:
-                    print(f"label: {w.label}, node_link_len: {self.node_link_length(w)} MM has become 0, "
-                          f"thus it will be removed from the score-table")
                     del score_table[w.label]
 
         # lastly remove the node from tree
         node.parent = None
-        print("----------------------------")
 
-    def execute_algorithm(self, verification=True):
+    def execute_algorithm(self, check_verification=True):
         """
         Run complete anonymization algorithm
         :return:
@@ -679,16 +651,27 @@ class HKPCoherence:
                                "time_find_min_moles": 0,
                                "time_total": 0}
 
-        start_time = time.time()
-
         # get the frozen set versions of dataset and the public items
         public_item_set, private_item_set, transaction_list = self.get_itemset_transaction_list(self.dataset,
                                                                                                 self.public_item_list,
                                                                                                 self.private_item_list)
+        #
+        support_set = defaultdict(int)
+
+        # public items that are non-moles and transaction list cleaned from size-1 moles
+        size1_non_moles, transaction_list = self.suppress_size1_moles(public_item_set,
+                                                                      private_item_set,
+                                                                      transaction_list,
+                                                                      support_set)
+        # start the timer for measuring the total runtime
+        start_time = time.time()
 
         # find minimal moles M* from D
         # get time pass as a return value, ugly but OK for the moment, TODO:change later
-        self.moles, pass_time = self.find_minimal_moles(public_item_set, private_item_set, transaction_list)
+        self.moles, pass_time = self.find_minimal_moles(public_item_set=size1_non_moles,
+                                                        private_item_set=private_item_set,
+                                                        transaction_list=transaction_list,
+                                                        support_set=support_set)
         performance_records["time_find_min_moles"] = int(pass_time)
 
         # Build the mole tree
@@ -700,9 +683,12 @@ class HKPCoherence:
         score_table = self.score_table
         root = self.mole_tree_root
 
+        # self.print_tree(root)
+
         # check if MM values in score table equal total mole_num count
         utils.check_MM_equal_mole_num(root, score_table)
 
+        print(f"\n##------------- MINIMAL MOLE SUPPRESSION STARTED -------------## \n")
         # process all items
         while score_table:
 
@@ -710,25 +696,18 @@ class HKPCoherence:
             score_table = dict(sorted(score_table.items(), key=lambda x: x[1]["MM"] / x[1]["IL"], reverse=True))
             key, value = next(iter(score_table.items()))
 
-            print(f"Score-table length is {len(score_table)} before suppression of item {key}")
+            print(f"Score-table length is {len(score_table)}, and Suppressed items length is {len(suppressed_items)} "
+                  f"before suppression of item {key}")
 
             # add the item e with the max MM/IL to suppressed items set
             # scoretable is already sorted in dec order of MM/IL
             suppressed_items.add(key)
-            print(f"SUPPRESSED ITEMS LIST: {suppressed_items}")
 
             # To delete a node from the tree we can set its parent to NONE, so the node and
             # all of its following branches will be disconnected from the rest of the tree
 
-            # FIXME: Headlink was None, in one occasion, find out what is wrong
             # get the headlink of the key
             head_link = self.get_head_of_link(key, score_table)
-
-            print(f"--------###### Node link details for item: {head_link.label} ######--------")
-            temp = head_link
-            while temp is not None:
-                print(f"label: {temp.label}, mole_num: {temp.mole_num}, node_link: {temp.node_link}")
-                temp = temp.node_link
 
             # delete all the subtrees starting from headlink, and following the nodelink
             current_node = head_link
@@ -736,9 +715,7 @@ class HKPCoherence:
                 self.delete_subtree(current_node, score_table)
                 current_node = current_node.node_link
 
-            self.print_tree(root)
-            print(f"Items in Score-table: {score_table.keys()}\n"
-                  f"Score-table length: {len(score_table.keys())}")
+            print(f"Score-table length: {len(score_table.keys())}\n")
 
         # after processing all items in the score-table, remove the items tagged as suppressed items from
         # the transactions in order to anonymize
@@ -748,6 +725,8 @@ class HKPCoherence:
             self.processed_public_items = [i for i in self.public_item_list if
                                            i not in suppressed_items and frozenset([i]) not in self.size1_moles]
 
+            # calculate sum occurrence for all the items that are suppressed
+            # needed for calculating distortion
             for item in self.suppressed_items:
                 self.suppressed_item_occurrence_count += self.support_dict[frozenset([item])]
 
@@ -761,29 +740,36 @@ class HKPCoherence:
             performance_records["time_total"] = int(time.time() - start_time)
             performance_records["distortion"] = distortion
 
-            print(f"\nScore table is empty.\nSuppressed items: {suppressed_items}\n"
+            print(f"\n####------ SCORE-TABLE IS EMPTY, FINISHED ANONYMIZING ------####.\n"
+                  f"\nSuppressed items: {suppressed_items}\n"
                   f"Suppressed items length: {len(suppressed_items)}, Size-1 moles: {len(self.size1_moles)}, "
                   f"Total Suppressed: {len(suppressed_items) + len(self.size1_moles)}\n"
                   f"Original number of public items: {len(self.public_item_list)}\n"
                   f"Public items after suppression, len:{len(self.processed_public_items)}, "
                   f"{self.processed_public_items}\n")
 
-            # Write performance records to csv file for later use
-            # Open the file in "append" mode
-            output_path = "./Plots/performance_records.csv"
-            df_performance = pd.DataFrame([performance_records])
-            df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
+            # start the anonymization verifier
+            is_verified = True
+            if check_verification:
+                is_verified = self.anonymization_verifier()
 
-            print(f"\nH: {self.h}, K: {self.k}, P:{self.p}, SIGMA: {self.sigma}\n"
-                  f"DISTORTION: {distortion}, TOTAL TIME: {performance_records['time_total']}, "
-                  f"TIME FIND MIN-MOLES: {performance_records['time_find_min_moles']}\n")
+            # if the data is successfully anonymized then record pereformance metrics and the anonymized version
+            # of the data
+            if is_verified:
+                # Write performance records to csv file for later use
+                # Open the file in "append" mode
+                output_path = "Plots/performance_records_no_random_seed.csv"
+                df_performance = pd.DataFrame([performance_records])
+                df_performance.to_csv(output_path, mode="a", index=False, header=not os.path.exists(output_path))
 
-            print("\nPreparing the anonymized file")
-            with open(r'Dataset/Anonymized/anonymized.txt', 'w') as f:
-                for t in self.dataset:
-                    transaction = ' '.join(map(str, t))
-                    f.write(f"{transaction}\n")
-                print('Done')
+                print(f"\nH: {self.h}, K: {self.k}, P:{self.p}, SIGMA: {self.sigma}\n"
+                      f"DISTORTION: {distortion}, TOTAL TIME: {performance_records['time_total']}, "
+                      f"TIME FIND MIN-MOLES: {performance_records['time_find_min_moles']}\n")
 
-        if verification is True:
-            self.anonymization_verifier()
+                print("\nPreparing the anonymized file")
+                anon_output_file = f'Dataset/Anonymized/T40_{len(self.dataset)}_anon.txt'
+                with open(anon_output_file, 'w') as f:
+                    for t in self.dataset:
+                        transaction = ' '.join(map(str, t))
+                        f.write(f"{transaction}\n")
+                    print('Done')

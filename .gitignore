@@ -1,14 +1,16 @@
 Dataset/Unused
 #Plots
 Plots/test_performance_records.csv
+Plots/performance_records (copy).csv
 Pickles
 .idea
 .ipynb_checkpoints
 scracth.py
 scratch3.py
 scratchv2.py
-test_main.py
 scratch4.py
 process_data.ipynb
+draw_performance_plots.ipynb
+
 notes.txt
 __pycache__
