@@ -99,7 +99,7 @@ def distortion_k(data_path, h, k_list, p, sigma):
 
 def prepare_data(data_path, sigma):
     # set a random seed
-    np.random.seed(1)
+    np.random.seed(10)
 
     # make a list of all items that can be found the dataset
     unique_items = find_unique_items(data_path)

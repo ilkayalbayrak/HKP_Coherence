@@ -14,10 +14,9 @@ if __name__ == "__main__":
     P = 4
     SIGMA = 0.15  # percentage of public items selected from the dataset
 
-    utils.distortion_p(DATA_PATH, h=H, k=K, p_list=p_list, sigma=SIGMA)
+    # utils.distortion_p(DATA_PATH, h=H, k=K, p_list=p_list, sigma=SIGMA)
     # utils.distortion_sigma(DATA_PATH, sigma_list=sigma_list, h=H, k=K, p=P)
-    # utils.distortion_k(DATA_PATH, h=H, k_list=k_list, p=P, sigma=SIGMA)
-
+    utils.distortion_k(DATA_PATH, h=H, k_list=k_list, p=P, sigma=SIGMA)
     # for i in range(4):
     #     utils.distortion_k(DATA_PATH, h=H, k_list=k_list, p=P, sigma=SIGMA)
     #
