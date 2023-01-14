@@ -1,15 +1,5 @@
-Dataset/Unused
-#Results
-Results/test_performance_records.csv
-Results/performance_records (copy).csv
-Pickles
 .idea
 .ipynb_checkpoints
-scracth.py
-scratch3.py
-scratchv2.py
-scratch4.py
-process_data.ipynb
 draw_performance_plots.ipynb
 
 notes.txt
